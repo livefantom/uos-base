@@ -3,7 +3,6 @@
 // Author: Benjamin
 // Date: 2009-05-02
 
-#pragma once
 #ifndef _UOS_DEF_H
 #define _UOS_DEF_H
 

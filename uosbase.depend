@@ -1,0 +1,74 @@
+# depslib dependency file v1.0
+1260018146 source:/home/dev/cxx/uos-base/main.cpp
+	"thread.h"
+	<cstdio>
+
+1260018146 source:/home/dev/cxx/uos-base/logger.cpp
+	"logger.h"
+	<io.h>
+	<process.h>
+	<unistd.h>
+	<pthread.h>
+	<time.h>
+	<fcntl.h>
+	<sys/stat.h>
+	<errno.h>
+	<stdio.h>
+	<string.h>
+	<assert.h>
+
+1260018146 /home/dev/cxx/uos-base/logger.h
+	<stdarg.h>
+	"mutex.h"
+	"uosdef.h"
+
+1260018146 /home/dev/cxx/uos-base/mutex.h
+	<windows.h>
+	<pthread.h>
+	<limits.h>
+	"uosdef.h"
+
+1260018775 /home/dev/cxx/uos-base/uosdef.h
+	<crtdefs.h>
+	<netinet/in.h>
+
+1260017038 /home/dev/cxx/uos-base/thread.h
+	<windows.h>
+	<pthread.h>
+	<limits.h>
+
+1260018146 source:/home/dev/cxx/uos-base/mutex.cpp
+	"mutex.h"
+	<stdio.h>
+	<string.h>
+	<errno.h>
+
+1260018887 source:/home/dev/cxx/uos-base/socket.cpp
+	"socket.h"
+	<errno.h>
+	<cstdio>
+	<cstring>
+	"OperationCode.h"
+	"uosdef.h"
+
+1260017038 /home/dev/cxx/uos-base/socket.h
+	<WinSock2.h>
+	<WS2tcpip.h>
+	<io.h>
+	<sys/socket.h>
+	<arpa/inet.h>
+	<string>
+	<errno.h>
+	<assert.h>
+	"uosdef.h"
+
+1260018640 /home/dev/cxx/uos-base/OperationCode.h
+
+1260017038 source:/home/dev/cxx/uos-base/thread.cpp
+	<unistd.h>
+	<sys/time.h>
+	<stdio.h>
+	<string.h>
+	<errno.h>
+	"thread.h"
+

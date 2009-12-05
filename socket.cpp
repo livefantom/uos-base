@@ -7,7 +7,10 @@
 
 #include "socket.h"
 #include <errno.h>
-#include <OperationCode.h>
+#include <cstdio>
+#include <cstring>
+#include "OperationCode.h"
+#include "uosdef.h"
 
 _UOS_BEGIN
 

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_layout_file>
+	<ActiveTarget name="Debug" />
+	<File name="OperationCode.h" open="0" top="0" tabpos="0">
+		<Cursor position="0" topLine="78" />
+	</File>
+	<File name="logger.h" open="0" top="0" tabpos="0">
+		<Cursor position="212" topLine="0" />
+	</File>
+	<File name="main.cpp" open="1" top="1" tabpos="1">
+		<Cursor position="274" topLine="0" />
+	</File>
+	<File name="mutex.cpp" open="0" top="0" tabpos="0">
+		<Cursor position="401" topLine="0" />
+	</File>
+	<File name="socket.cpp" open="0" top="0" tabpos="0">
+		<Cursor position="313" topLine="0" />
+	</File>
+	<File name="socket.h" open="0" top="0" tabpos="0">
+		<Cursor position="699" topLine="6" />
+	</File>
+	<File name="thread.cpp" open="0" top="0" tabpos="0">
+		<Cursor position="213" topLine="278" />
+	</File>
+	<File name="uosdef.h" open="0" top="0" tabpos="0">
+		<Cursor position="171" topLine="0" />
+	</File>
+</CodeBlocks_layout_file>
