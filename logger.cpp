@@ -15,6 +15,18 @@
 #include <time.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+
+#ifndef ASSERT
+#define ASSERT assert
+#endif
+#ifndef MAX_BUFFER_SIZE
+#define MAX_BUFFER_SIZE 1024
+#endif
+
 
 #define MAX_TIME_STR    20
 

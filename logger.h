@@ -8,7 +8,7 @@
 #define _UOS_LOGGER_H
 
 #include <stdarg.h>
-#include <SysMutex.h>
+#include "mutex.h"
 #include "uosdef.h"
 
 
@@ -56,7 +56,7 @@ private:
     int     _file_sz;
     LOG_LEVEL   _level;
 
-    SysMutex    _log_mtx;
+    Mutex    _log_mtx;
     int     _log_fd;
 
 };
