@@ -7,15 +7,17 @@
 #ifndef _UOS_LOGGER_H
 #define _UOS_LOGGER_H
 
-#include <stdarg.h>
-#include "mutex.h"
 #include "uosdef.h"
-
-
-_UOS_BEGIN
+#include "mutex.h"
 
 #define MAX_PREFIX  30
 #define DEFAULT_FILE_SZ 16*1024
+#ifndef MAX_PATH
+#   define MAX_PATH 510
+#endif
+
+_UOS_BEGIN
+
 
 class Logger
 {

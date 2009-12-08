@@ -7,21 +7,12 @@
 #ifndef _UOS_MUTEX_H
 #define _UOS_MUTEX_H 
 
-#ifdef WIN32
-#   include <windows.h>
-#   ifndef ULONG_MAX
-#	define ULONG_MAX 0xFFFFFFFF
-#   endif
-#else
-#	include <pthread.h>
-#	include <limits.h>
-#endif
-
 #include "uosdef.h"
 
-#define DISABLE_COPY(Class) \
-    Class(const Class &); \
-    Class &operator=(const Class &);
+#ifdef WIN32
+#else
+#	include <pthread.h>
+#endif
 
 
 

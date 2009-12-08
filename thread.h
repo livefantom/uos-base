@@ -7,21 +7,18 @@
 #ifndef _UOS_THREAD_H
 #define _UOS_THREAD_H 
 
+#include "uosdef.h"
+
 #ifdef WIN32
-#   include <windows.h>
 #ifndef ULONG_MAX
 #	define ULONG_MAX 0xFFFFFFFF
 #endif
-#   ifdef sleep
-#   undef sleep
-#   endif
-#   ifdef usleep
-#   undef usleep
-#   endif
 #else
 #	include <pthread.h>
-#	include <limits.h>
 #endif
+
+
+_UOS_BEGIN
 
 
 class WaitCond
@@ -29,15 +26,15 @@ class WaitCond
 public:
         WaitCond();
         ~WaitCond();
-        void    wakeOne();
-        void    wakeAll();
-        bool    wait(unsigned long millisecs);
+        void wakeOne();
+        void wakeAll();
+        bool wait(unsigned long millisecs);
 
 private:
-        void    lock();
-        void    unlock();
-        void    init();
-        void    cleanup();
+        void lock();
+        void unlock();
+        void init();
+        void cleanup();
 
 private:
 #ifndef WIN32
@@ -90,4 +87,11 @@ private:
 	static void finish(void* arg);
 };
 
+
+
+_UOS_END
+
+
 #endif//(_UOS_THREAD_H)
+
+

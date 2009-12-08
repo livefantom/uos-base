@@ -9,10 +9,10 @@
 #ifndef _UOS_SOCKET_H
 #define _UOS_SOCKET_H
 
+#include "uosdef.h"
+
 #ifdef WIN32
 #   include <WinSock2.h>
-#	include <WS2tcpip.h>
-#   include <io.h>
 #   define  ECONNRESET      WSAECONNRESET
 #   define  ENOTCONN        WSAENOTCONN
 #   define  ETIMEDOUT       WSAETIMEDOUT
@@ -23,11 +23,7 @@
 #	include <arpa/inet.h>
 #   define  _close(x)  close(x)
 #endif
-
 #include <string>
-#include <errno.h>
-#include <assert.h>
-#include "uosdef.h"
 
 _UOS_BEGIN
 
@@ -102,7 +98,7 @@ uint32_t ip2long(const std::string& ip4_string);
 class SockAddr
 {
 public:
-	SockAddr(const char* ip_string, int port);
+	SockAddr(const char* host_name, int port);
 	SockAddr(uint32_t ip4, int port):_ip4(ip4),_port(port){}
 
     std::string IPString() const;

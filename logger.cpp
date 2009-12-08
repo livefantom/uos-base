@@ -5,9 +5,13 @@
 // @date: 2009-07-02
 
 #include "logger.h"
+
 #ifdef WIN32
+#   include <Windows.h>
 #   include <io.h>
+#   include <direct.h>
 #   include <process.h>
+#   define snprintf     _snprintf
 #else
 #   include <unistd.h>
 #   include <pthread.h>
@@ -15,10 +19,6 @@
 #include <time.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
 
 #ifndef ASSERT
 #define ASSERT assert
@@ -69,8 +69,11 @@ int Logger::initialize(
 )
 {
     int retval = -1;
-
-    ASSERT(dir != NULL);
+    if (dir == NULL)
+    {
+        printf("invalid directory argument!\n");
+        return -1;
+    }
 
     strncpy(_dir, dir, MAX_PATH);
     _dir[MAX_PATH] = '\0';
@@ -98,13 +101,12 @@ int Logger::initialize(
 
 int Logger::release()
 {
-    _log_mtx.lock();
+    MutexLocker locker(&_log_mtx);
     if (_log_fd != -1)
     {
         close(_log_fd);
         _log_fd = -1;;
     }
-    _log_mtx.unlock();
     return 1;
 }
 
@@ -300,7 +302,6 @@ int Logger::switch_file()
             }
         }
         // else no need switch.
-        // break;
         retval = 1;
     } while (false);
     _log_mtx.unlock();

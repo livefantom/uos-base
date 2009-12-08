@@ -6,7 +6,7 @@
 
 #ifdef WIN32
 #else
-#include <unistd.h>
+#	include <unistd.h>
 #	include <sys/time.h>
 #endif
 #include <stdio.h>
@@ -16,6 +16,8 @@
 #define	Warning	printf
 
 #include "thread.h"
+
+_UOS_BEGIN
 
 //////////////////////////////////////////////////////////////////////////
 // class WaitCond members
@@ -309,4 +311,6 @@ void Thread::finish(void* arg)
     thr->_thr_id = 0;
 	thr->_thr_done.wakeAll();
 }
+
+_UOS_END
 
