@@ -87,7 +87,6 @@ int Socket::bind(const SockAddr& address)
 	return 1;
 }
 
-
 int Socket::listen(int backlog /* = SOMAXCONN */)
 {
     if (-1 == _sock_fd)
@@ -101,7 +100,6 @@ int Socket::listen(int backlog /* = SOMAXCONN */)
 	}
 	return 1;
 }
-
 
 int Socket::close()
 {
@@ -130,7 +128,6 @@ int Socket::shutdown(int how)
         return (SOCK_ERR_BASE - errno);
     }
     return 1;
-
 }
 
 int Socket::setsockopt(int level, int optname, const char* optval, int optlen)
@@ -150,7 +147,34 @@ int Socket::setsockopt(int level, int optname, const char* optval, int optlen)
 
 int Socket::setblocking(bool flag)
 {
-    return flag = true;
+    int flags, newflags;
+    if (-1 == _sock_fd)
+    {
+        return E_SYS_NET_INVALID;
+    }
+
+    flags = fcntl( fd, F_GETFL, 0 );
+    if (-1 == flags)
+    {
+    	printf("Get flag failed: %d: %s\n", errno, strerror(errno));
+        return (SOCK_ERR_BASE - errno);
+    }
+    
+    if ( false == flag )
+        newflags = flags | (int) O_NDELAY;
+    else
+        newflags = flags & ~ (int) O_NDELAY;
+
+    if ( newflags != flags )
+    {
+        flags = fcntl( fd, F_SETFL, newflags );
+	    if (-1 == flags)
+	    {
+	    	printf("Set `%d' flag failed: %d: %s\n", newflags, errno, strerror(errno));
+	        return (SOCK_ERR_BASE - errno);
+	    }
+    }
+    return 1;
 }
 
 int Socket::settimeout(int millisecs)
