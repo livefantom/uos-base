@@ -1,7 +1,7 @@
 #include "thread.h"
 #include <cstdio>
 
-class WorkThread : public Thread
+class WorkThread : public uos::Thread
 {
 protected:
 	virtual void run()
@@ -9,7 +9,7 @@ protected:
 		int i=10;
 		while(i--)
 		{
-			printf("%d, %d\n", i, time(0));
+			printf("%d, %d\n", i, (int)time(0));
 			sleep(1);
 		}
 	}
