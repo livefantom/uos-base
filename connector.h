@@ -1,7 +1,9 @@
 #ifndef _CONNECTOR_H
 #define _CONNECTOR_H
 
+#include "thread.h"
 #include "socket.h"
+#include "sockwatcher.h"
 
 struct ConnProperty
 {
@@ -14,54 +16,7 @@ struct ConnProperty
 };
 
 
-class ConnPool
-{
-	friend class Connector;
-public:
-	ConnPool(int size, void* pfn)
-	{
-		// record owner.
-		_thr_id = pthread_self();
-
-		_conn_size = size;
-		max = _watch.getmaxfiles();
-		_conn_size = (max <= size) ? max : size;
-		_conn = new Connector[_conn_size];
-		
-		
-		// start to run.
-		start();
-	};
-	
-    int asyncSend(char* buffer, int* nbytes, int sequence)
-    {
-    	if ( _thr_id != pthread_self() )
-    		return -1;
-
-    	for( int i=0; i<_size; ++i )
-    	{
-    		// 线程同步问题？？？
-    		if ( true == _conn[i]._free )
-    		{
-    			_conn[i]._sequence = sequence;
-    			_conn[i]._free = false;
-    			_conn[i].sendMsg();
-    			return 1;
-    		}
-    	}
-    	return -1;
-    };
-private:
-    pthread_t	_thr_id;
-	Connector*	_conn;
-	int		_conn_size;
-	
-	SocketWatch	_watch;
-	
-	void* _pfn;
-}
-
-class Connector
+class Connector : public uos::Socket
 {
 public:
     Connector(const ConnProperty& proper);
@@ -73,7 +28,27 @@ public:
 
     int recvMsg(char* buffer, int* nbytes);
     int sendMsg(const char* buffer, int nbytes);
-
+    
+    int do_read()
+    {
+    }
+    int do_write()
+    {
+    }
+    
+    void setFlag(int flag)
+    {
+		_flag = flag;
+		_last_active_time = time(0);
+    }
+    
+    bool timeout()
+    {
+    	if ( time(0) > _last_active_time + _timeout )
+    		return true;
+    	else
+    		return false;
+    }
 
 protected:
     int next_seq();
@@ -87,12 +62,60 @@ private:
 
     bool        _connected;
     time_t      _last_active_time;
+    int		_timeout;
     uint32_t    _sequence;
 
-	char*	_send_buf;
-	char*	_recv_buf;
-	bool	_free;
+	char*	_wr_buf;
+	char*	_rd_buf;
+	int		_wr_idx;
+	int		_rd_idx;
 
+	int		_buf_size;
+
+	bool	_flag;
+
+};
+
+typedef void (*GetReqFunc)(char*, int*, int*);
+typedef void (*SetResFunc)(int, const char*, int, int);
+
+class ConnPool : public uos::Thread
+{
+	friend class Connector;
+	enum CONN_FLAG{
+			F_FREE,
+			F_CONNECTING,
+			F_READING,
+			F_WRITING,
+			F_DONE
+	};
+public:
+	ConnPool(int size, GetReqFunc pfn_req, SetResFunc pfn_res, const ConnProperty& proper)
+	{
+		_conn_size = size;
+		_pfn_req = pfn_req;
+		_pfn_res = pfn_res;
+		int max = 10;//_watch.getmaxfiles();
+		_conn_size = (max <= size) ? max : size;
+		_conn = new Connector[_conn_size];
+		
+		// start to run.
+		start();
+	};
+	
+	~ConnPool(){}
+
+    virtual void run();
+    
+private:
+	Connector*	_conn;
+	int		_conn_size;
+	int		_conn_cnt;
+	
+	SockWatcher	_watch;
+	
+	GetReqFunc _pfn_req;
+	SetResFunc _pfn_res;
 };
 
 #endif//(_CONNECTOR_H)

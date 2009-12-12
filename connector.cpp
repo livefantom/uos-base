@@ -19,6 +19,122 @@ using namespace std;
 #define DEBUGLOG    PfAuth::singleton()->_log.debug
 #define CFGINFO PfAuth::singleton()->_cfg
 
+
+void ConnPool::run()
+{
+	_conn_cnt = _conn_size;
+ 	// main loop
+	while ( (! _terminate) || (_conn_cnt > 0) )
+	{
+		nready = _watch.watch();
+		if ( nready < 0 )
+		{
+			if (errno == EINTR || error == EAGAIN )
+				continue;
+			printf("watch failed!\n");
+			break;
+		}
+		// if no socket is ready, just test timeout!
+		if ( nready = 0 )
+		{
+			// TODO: check timeout!!!
+			continue;
+		}
+		
+		int retcode = -1;
+		for (int i=0; i<_conn_cnt; ++i)
+		{
+			int flag = _conn[i]._flag;
+			
+			if ( F_FREE == flag )
+			{
+				//_conn[i].socket();
+    			// set socket nonblocking.
+    			_conn[i].setblocking(false);
+    			try{
+	    			_conn[i].connect( SockAddr(host_name, port) );
+    			}
+    			catch{
+    				
+    			}
+				_conn[i].setFlag(F_CONNECTING);
+    			// select for reading and writing.
+    			_watch.add_fd( _conn[i].fileno() , FDW_READ );
+    			_watch.add_fd( _conn[i].fileno() , FDW_WRITE );
+			}
+			else if ( F_DONE == flag && true != _conn[i].timeout() )
+			{
+				// TODO: req_func();
+				if (retcode != 1)
+					continue;
+    			_conn[i]._sequence = sequence;
+    			memcpy( _conn[i]._send_buf , buffer, nbytes );
+				_conn[i].setFlag(F_WRITING);
+    			_watch.add_fd( _conn[i].fileno(), FDW_WRITE );
+			}
+			else if ( F_CONNECTING == flag 
+				&& ( _watch.check_fd( _conn[i].fileno(), FDW_WRITE ) || _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
+		    )
+			{
+				int error;
+				int n = sizeof(error);
+				if ( _conn[i].getsockopt(SOL_SOCKET, SO_ERROR, &error, &n) < 0 || error != 0 )
+				{
+					printf("nonblocking connect failed!\n");
+				}
+				printf("connection established!\n");
+				_watch.del_fd(_conn[i].fileno());
+				_conn[i].setFlag(F_WRITING);
+				_watch.add_fd( _conn[i].fileno(), FDW_WRITE );
+			}
+			else if ( F_READING == flag && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
+			{
+				retcode = _conn[i].do_read();
+				if (retcode != 1)
+					continue;
+				// if read over & not close.
+				// TODO: res_func();
+				pfn_res(retcode, _conn[i].recv_buf, _conn[i].recv_size, _conn[i]._sequence);
+				_conn[i]._sequence = 0;
+				_watch.del_fd(_conn[i].fileno());
+				_conn[i].setFlag(F_DONE);
+				
+				// get another request.
+				// TODO: req_func();
+				//if (ret != 1)
+				//	continue;
+				
+			}
+			else if ( F_WRITING == flag && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
+			{
+				retcode = _conn[i].do_write();
+				if (retcode != 1)
+					continue;
+				// if write over!
+				_watch.del_fd(_conn[i].fileno());
+				_conn[i].setFlag(F_READING);
+				// prepare for reading response.
+				_watch.add_fd( _conn[i].fileno(), FDW_READ );
+			}
+			else
+			{
+				if ( true == _conn[i].timeout() )
+				{
+					_conn[i].close();
+					_watch.del_fd(_conn[i].fileno());
+					_conn[i].setFlag(F_FREE);
+					// TODO: res_func();
+				}
+			}
+		}// end of for.
+		
+
+	}
+
+}
+
+
+
 Connector::Connector(const ConnProperty& proper)
 : _proper(proper)
 , _remote_addr(_proper.svr_name, _proper.svr_port)
@@ -69,7 +185,7 @@ int Connector::reconnect()
     time(&_last_active_time);
     SysTimeValue::getTickCount(&ullOpBgnTime);
     // connect to remote host.
-    retcode = _sock.connect(_remote_addr);
+    retcode = _sock.connect(SockAddr(host_name, port));
     if (S_SUCCESS == retcode && true == _connected)
     {
         DEBUGLOG("Connector::reconnect| Already connected!\n");

@@ -1,8 +1,5 @@
+#include "sockwatcher.h"
 
-int SockWatcher::watch()
-{
-	
-}
 
 int SockWatcher::add_fd(int fd, int rw)
 {
@@ -13,12 +10,14 @@ int SockWatcher::add_fd(int fd, int rw)
 		return -1;
 	}
 	// add socket to the set.
-	select_fds[_sock_num] = fd;
+	_select_fds[_sock_num] = fd;
 	switch( rw )
 	{
 		case FDW_READ:
+			FD_SET( fd, &_master_rset );
 			break;
 		case FDW_WRITE:
+			FD_SET( fd, &_master_wset );
 			break;
 		default:
 			break;
@@ -30,14 +29,14 @@ int SockWatcher::add_fd(int fd, int rw)
 	++_sock_num;
 }
 
-int SockWatch::check_fd( int fd )
+int SockWatch::check_fd( int fd, rw )
 {
-	switch( _fd_rw[fd] )
+	switch( rw )
 	{
 		case FDW_READ:
-			return FD_ISSET( fd, &working_rfdset );
+			return FD_ISSET( fd, &_word_rset );
 		case FDW_WRITE:
-			return FD_ISSET( fd, &working_wfdset );
+			return FD_ISSET( fd, &_work_wset );
 		default:
 			return 0;
 	}
@@ -62,15 +61,14 @@ int SockWatch::del_fd( int fd )
 	select_fds[_sock_num] = -1;
 	// clear index record.
 	_fd_idx[fd] = -1;
-	
-	FD_CLR( fd, &master_rfdset );
-	FD_CLR( fd, &master_wfdset );
-	
+
+	FD_CLR( fd, &_master_rset );
+	FD_CLR( fd, &_master_wset );
+
 	if ( fd >= _maxfd )
 		_maxfd_changed = true;
-	
-	return 1;
 
+	return 1;
 }
 
 int SockWatch::get_fd( int ridx )
@@ -85,8 +83,8 @@ int SockWatch::get_fd( int ridx )
 
 int SockWatch::init()
 {
-	FD_ZERO( &master_rfdset );
-	FD_ZERO( &master_wfdset );
+	FD_ZERO( &_master_rfdset );
+	FD_ZERO( &_master_wfdset );
 	select_fds = new int[_size];
 	_fd_idx = new int[_szie];
 	_active_idx = new int[_size];
@@ -102,18 +100,24 @@ int SockWatch::init()
 
 int SockWatch::watch( long timeout_msecs )
 {
-	int max_fd = get_maxfd();
+	_work_rset = _master_rset;
+	_work_wset = _master_wset;
+
+	get_maxfd();
+
 	if ( -1 == timeout_msecs )
 	{
-		nready = select( max_fd+1, &working_rfdset, &working_wfdset, (fd_set*)0, (struct timeval*)0 );
+		nready = select( _max_fd+1, &_work_rset, &_work_wset, (fd_set*)0, (struct timeval*)0 );
 	}
 	else
 	{
 		struct timeval timeout;
 		timeout.tv_sec = timeout_msecs / 1000L;
 		timeout.tv_usec = ( timeout_msecs % 1000L ) * 1000L;
-		nready = select( max_fd +1, &working_rfdset, &working_wfdset, (fd_set*)0, &timeout );
+		nready = select( _max_fd +1, &_work_rset, &_work_wset, (fd_set*)0, &timeout );
 	}
+	return nready;
+/*
 	if (nready <= 0 )
 		return nready;
 	
@@ -130,6 +134,7 @@ int SockWatch::watch( long timeout_msecs )
 		}
 	}
 	return j;	// j should be equal to nready.
+*/
 }
 
 int SockWatch::get_maxfd()
@@ -139,8 +144,8 @@ int SockWatch::get_maxfd()
 		_maxfd = -1;
 		for ( int i = 0; i < _sock_num; ++i )
 		{
-			if ( select_fds[i] > _maxfd )
-				_maxfd = select_fds[i];
+			if ( _select_fds[i] > _maxfd )
+				_maxfd = _select_fds[i];
 		}
 		_maxfd_changed = false;
 	}

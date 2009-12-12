@@ -63,8 +63,6 @@ int PfAuth::initialize(const char* conf_path)
     }
     printf("PfAuth logger initialized successfully!\n");
 
-	//读取DCode的配置文件
-
     return S_SUCCESS;
 
 }
