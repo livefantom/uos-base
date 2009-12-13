@@ -8,67 +8,44 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/uosbase" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Debug/" />
+				<Option platforms="Unix;" />
+				<Option output="bin/uosbase" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
+					<Add directory="includes" />
 				</Compiler>
 				<Linker>
 					<Add library="pthread" />
-				</Linker>
-			</Target>
-			<Target title="Release">
-				<Option output="bin/Release/uosbase" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Release/" />
-				<Option type="1" />
-				<Option compiler="gcc" />
-				<Compiler>
-					<Add option="-O2" />
-				</Compiler>
-				<Linker>
-					<Add option="-s" />
+					<Add library="EBase" />
+					<Add directory="lib" />
 				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
+			<Add option="-march=i686" />
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
-		<Unit filename="OperationCode.h">
-			<Option target="Debug" />
-		</Unit>
-		<Unit filename="logger.cpp">
-			<Option target="Debug" />
-		</Unit>
-		<Unit filename="logger.h">
-			<Option target="Debug" />
-		</Unit>
-		<Unit filename="main.cpp">
-			<Option target="Debug" />
-		</Unit>
-		<Unit filename="mutex.cpp">
-			<Option target="Debug" />
-		</Unit>
-		<Unit filename="mutex.h">
-			<Option target="Debug" />
-		</Unit>
-		<Unit filename="socket.cpp">
-			<Option target="Debug" />
-		</Unit>
-		<Unit filename="socket.h">
-			<Option target="Debug" />
-		</Unit>
-		<Unit filename="thread.cpp">
-			<Option target="Debug" />
-		</Unit>
-		<Unit filename="thread.h">
-			<Option target="Debug" />
-		</Unit>
-		<Unit filename="uosdef.h">
-			<Option target="Debug" />
-		</Unit>
+		<Unit filename="OperationCode.h" />
+		<Unit filename="connector.cpp" />
+		<Unit filename="connector.h" />
+		<Unit filename="logger.cpp" />
+		<Unit filename="logger.h" />
+		<Unit filename="main.cpp" />
+		<Unit filename="mutex.cpp" />
+		<Unit filename="mutex.h" />
+		<Unit filename="pfauth.cpp" />
+		<Unit filename="pfauth.h" />
+		<Unit filename="socket.cpp" />
+		<Unit filename="socket.h" />
+		<Unit filename="sockwatcher.cpp" />
+		<Unit filename="sockwatcher.h" />
+		<Unit filename="thread.cpp" />
+		<Unit filename="thread.h" />
+		<Unit filename="uosdef.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

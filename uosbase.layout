@@ -4,20 +4,32 @@
 	<File name="OperationCode.h" open="0" top="0" tabpos="0">
 		<Cursor position="0" topLine="78" />
 	</File>
+	<File name="connector.cpp" open="1" top="0" tabpos="2">
+		<Cursor position="3834" topLine="149" />
+	</File>
+	<File name="connector.h" open="1" top="1" tabpos="4">
+		<Cursor position="1198" topLine="44" />
+	</File>
 	<File name="logger.h" open="0" top="0" tabpos="0">
 		<Cursor position="212" topLine="0" />
 	</File>
-	<File name="main.cpp" open="1" top="1" tabpos="1">
-		<Cursor position="274" topLine="0" />
+	<File name="main.cpp" open="1" top="0" tabpos="1">
+		<Cursor position="136" topLine="0" />
 	</File>
 	<File name="mutex.cpp" open="0" top="0" tabpos="0">
 		<Cursor position="401" topLine="0" />
+	</File>
+	<File name="pfauth.cpp" open="1" top="0" tabpos="3">
+		<Cursor position="2296" topLine="78" />
 	</File>
 	<File name="socket.cpp" open="0" top="0" tabpos="0">
 		<Cursor position="313" topLine="0" />
 	</File>
 	<File name="socket.h" open="0" top="0" tabpos="0">
 		<Cursor position="699" topLine="6" />
+	</File>
+	<File name="sockwatcher.cpp" open="1" top="0" tabpos="5">
+		<Cursor position="555" topLine="3" />
 	</File>
 	<File name="thread.cpp" open="0" top="0" tabpos="0">
 		<Cursor position="213" topLine="278" />

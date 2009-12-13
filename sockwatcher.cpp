@@ -27,6 +27,7 @@ int SockWatcher::add_fd( int fd, int rw )
 	// recode this socket index in the set.
 	_fd_idx[fd] = _sock_num;
 	++_sock_num;
+	return 1;
 }
 
 int SockWatcher::check_fd( int fd, int rw )
@@ -121,7 +122,7 @@ int SockWatcher::watch( long timeout_msecs )
 /*
 	if (nready <= 0 )
 		return nready;
-	
+
 	int j = 0;
 	for (int i = 0; i < sock_num; ++i)
 	{
@@ -131,7 +132,7 @@ int SockWatcher::watch( long timeout_msecs )
 			if (j == nready)
 			{
 				break;
-			} 
+			}
 		}
 	}
 	return j;	// j should be equal to nready.

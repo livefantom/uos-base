@@ -46,11 +46,6 @@ int PfAuth::initialize(const char* conf_path)
     conf.getIntVal("log_level", &_cfg.log_level, 4);
     conf.getIntVal("log_file_size", &_cfg.log_file_sz, 8);
 
-#ifdef _BAIDU_
-	conf.getStringVal("api_key", _cfg.api_key, "");
-	conf.getStringVal("app_secret", _cfg.app_secret, "");
-	conf.getStringVal("version", _cfg.version, "1.0");
-#endif
     conf.release();
     printf("PfAuth config loaded successfully!\n");
 

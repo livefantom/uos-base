@@ -37,19 +37,18 @@ void ConnPool::run()
 			break;
 		}
 		// if no socket is ready, just test timeout!
-		if ( nready = 0 )
+		if ( 0 == nready )
 		{
 			// TODO: check timeout!!!
 			continue;
 		}
-		
+
 		int retcode = -1;
-		for (int i=0; i<_conn_cnt; ++i)
+		for (uint32_t i = 0; i < _conn_cnt; ++i)
 		{
 			if ( _conn[i].isFree() )
 			{
-				//_conn[i].socket();
-    			// set socket nonblocking.
+				_conn[i].socket(AF_INET, SOCK_STREAM, 0);
     			_conn[i].setblocking(false);
     			try
     			{
@@ -99,12 +98,12 @@ void ConnPool::run()
 				_conn[i]._sequence = 0;
 				_watch.del_fd(_conn[i].fileno());
 				_conn[i].setFlag( Connector::S_DONE );
-				
+
 				// get another request.
 				// TODO: req_func();
 				//if (ret != 1)
 				//	continue;
-				
+
 			}
 			else if ( _conn[i].isWriting() && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
 			{
@@ -128,7 +127,7 @@ void ConnPool::run()
 				}
 			}
 		}// end of for.
-		
+
 
 	}
 
