@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 
+
 using namespace std;
 
 #define SEQ_INIT_VAL    0xFFFF
@@ -23,13 +24,14 @@ using namespace std;
 void ConnPool::run()
 {
 	_conn_cnt = _conn_size;
+	int nready = 0;
  	// main loop
 	while ( (! _terminate) || (_conn_cnt > 0) )
 	{
-		nready = _watch.watch();
+		nready = _watch.watch(-1);
 		if ( nready < 0 )
 		{
-			if (errno == EINTR || error == EAGAIN )
+			if (errno == EINTR || errno == EAGAIN )
 				continue;
 			printf("watch failed!\n");
 			break;
@@ -44,35 +46,34 @@ void ConnPool::run()
 		int retcode = -1;
 		for (int i=0; i<_conn_cnt; ++i)
 		{
-			int flag = _conn[i]._flag;
-			
-			if ( F_FREE == flag )
+			if ( _conn[i].isFree() )
 			{
 				//_conn[i].socket();
     			// set socket nonblocking.
     			_conn[i].setblocking(false);
-    			try{
-	    			_conn[i].connect( SockAddr(host_name, port) );
+    			try
+    			{
+	    			_conn[i].connect( uos::SockAddr(_prop.remote_host, _prop.remote_port) );
     			}
-    			catch{
-    				
+    			catch (...)
+    			{
+    				;
     			}
-				_conn[i].setFlag(F_CONNECTING);
+				_conn[i].setFlag( Connector::S_CONNECTING );
     			// select for reading and writing.
     			_watch.add_fd( _conn[i].fileno() , FDW_READ );
     			_watch.add_fd( _conn[i].fileno() , FDW_WRITE );
 			}
-			else if ( F_DONE == flag && true != _conn[i].timeout() )
+			else if ( _conn[i].isDone() && true != _conn[i].timeout() )
 			{
 				// TODO: req_func();
+				retcode = _pfn_req( _conn[i]._wr_buf, &_conn[i]._wr_size, &_conn[i]._sequence );
 				if (retcode != 1)
 					continue;
-    			_conn[i]._sequence = sequence;
-    			memcpy( _conn[i]._send_buf , buffer, nbytes );
-				_conn[i].setFlag(F_WRITING);
+				_conn[i].setFlag( Connector::S_WRITING );
     			_watch.add_fd( _conn[i].fileno(), FDW_WRITE );
 			}
-			else if ( F_CONNECTING == flag 
+			else if ( _conn[i].isConnecting()
 				&& ( _watch.check_fd( _conn[i].fileno(), FDW_WRITE ) || _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
 		    )
 			{
@@ -84,20 +85,20 @@ void ConnPool::run()
 				}
 				printf("connection established!\n");
 				_watch.del_fd(_conn[i].fileno());
-				_conn[i].setFlag(F_WRITING);
+				_conn[i].setFlag( Connector::S_WRITING );
 				_watch.add_fd( _conn[i].fileno(), FDW_WRITE );
 			}
-			else if ( F_READING == flag && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
+			else if ( _conn[i].isReading() && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
 			{
 				retcode = _conn[i].do_read();
 				if (retcode != 1)
 					continue;
 				// if read over & not close.
 				// TODO: res_func();
-				pfn_res(retcode, _conn[i].recv_buf, _conn[i].recv_size, _conn[i]._sequence);
+				_pfn_res( retcode, _conn[i]._rd_buf, _conn[i]._rd_size, _conn[i]._sequence );
 				_conn[i]._sequence = 0;
 				_watch.del_fd(_conn[i].fileno());
-				_conn[i].setFlag(F_DONE);
+				_conn[i].setFlag( Connector::S_DONE );
 				
 				// get another request.
 				// TODO: req_func();
@@ -105,14 +106,14 @@ void ConnPool::run()
 				//	continue;
 				
 			}
-			else if ( F_WRITING == flag && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
+			else if ( _conn[i].isWriting() && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
 			{
 				retcode = _conn[i].do_write();
 				if (retcode != 1)
 					continue;
 				// if write over!
 				_watch.del_fd(_conn[i].fileno());
-				_conn[i].setFlag(F_READING);
+				_conn[i].setFlag( Connector::S_READING );
 				// prepare for reading response.
 				_watch.add_fd( _conn[i].fileno(), FDW_READ );
 			}
@@ -122,7 +123,7 @@ void ConnPool::run()
 				{
 					_conn[i].close();
 					_watch.del_fd(_conn[i].fileno());
-					_conn[i].setFlag(F_FREE);
+					_conn[i].setFlag( Connector::S_FREE );
 					// TODO: res_func();
 				}
 			}
@@ -135,81 +136,12 @@ void ConnPool::run()
 
 
 
-Connector::Connector(const ConnProperty& proper)
-: _proper(proper)
-, _remote_addr(_proper.svr_name, _proper.svr_port)
-, _connected(false)
-, _last_active_time(0)
-, _sequence(SEQ_INIT_VAL)
-{
-	_thr_id = pthread_self();
-
-    reconnect();
-}
-
 Connector::~Connector()
 {
     if (true == _connected)
     {
-        _sock.close();
+        Socket::close();
     }
-}
-
-int Connector::reconnect()
-{
-    int retcode = E_ERROR;
-    int retval  = E_ERROR;
-
-    uint64_t ullOpBgnTime = 0;          // unit is (ms)
-    uint64_t ullOpEndTime = 0;          // unit is (ms)
-
-    // if never connected or connection is closed.
-    if (false == _connected)
-    {
-        // create new socket.
-        retcode = _sock.socket(AF_INET, SOCK_STREAM, 0);
-        if (retcode != S_SUCCESS)
-        {
-            retval = retcode;
-            goto ExitError;
-        }
-
-        retcode = _sock.settimeout(_proper.rcv_timeout * 1000);
-        if (retcode != S_SUCCESS)
-        {
-            retval = retcode;
-            goto ExitError;
-        }
-    }
-
-    time(&_last_active_time);
-    SysTimeValue::getTickCount(&ullOpBgnTime);
-    // connect to remote host.
-    retcode = _sock.connect(SockAddr(host_name, port));
-    if (S_SUCCESS == retcode && true == _connected)
-    {
-        DEBUGLOG("Connector::reconnect| Already connected!\n");
-        goto ExitOK;
-    }
-    else if (retcode != S_SUCCESS)
-    {
-        DEBUGLOG("Connector::reconnect| connect error:%d\n", retcode);
-        disconnect();
-        retval = retcode;
-        goto ExitError;
-    }
-
-    _connected = true;
-    SysTimeValue::getTickCount(&ullOpEndTime);
-    INFOLOG("Connector::reconnect| Connected to %s:%d. |TC = %llu\n",
-        _remote_addr.IPString().c_str(),
-        _remote_addr.port(),
-        ullOpEndTime - ullOpBgnTime);
-
-ExitOK:
-    retval = S_SUCCESS;
-ExitError:
-    return retval;
 }
 
 int Connector::disconnect()
@@ -219,40 +151,12 @@ int Connector::disconnect()
     struct linger lg;
     lg.l_onoff = 1;
     lg.l_linger = 0;
-    retcode = _sock.setsockopt(SOL_SOCKET, SO_LINGER, (char*)&lg, sizeof(lg));
-    retcode = _sock.close();
+    retcode = Socket::setsockopt(SOL_SOCKET, SO_LINGER, (char*)&lg, sizeof(lg));
+    retcode = Socket::close();
 
     _connected = false;
     INFOLOG("Connector::disconnect| Connection closed!\n");
     return S_SUCCESS;
-}
-
-int Connector::next_seq()
-{
-    if (++_sequence >= LONG_MAX )
-        _sequence = SEQ_INIT_VAL; // recycle use.
-    return _sequence;
-}
-
-int Connector::userAuth(const char* user_name,
-    const char* password,
-    const char* game_id)
-{
-    int retcode = E_ERROR;
-    int retval  = E_ERROR;
-
-
-    uint64_t ullOpBgnTime = 0;          // unit is (ms)
-    uint64_t ullOpEndTime = 0;            // unit is (ms)
-
-
-    SysTimeValue::getTickCount(&ullOpBgnTime);
-
-ExitError:
-    SysTimeValue::getTickCount(&ullOpEndTime);
-    INFOLOG("PfAuth|%d|%s|%s|GID=%s|TC=%llu\n",
-        retval, user_name, password, game_id, ullOpEndTime - ullOpBgnTime);
-    return retval;
 }
 
 int Connector::recvMsg(char* buffer, int* nbytes)
@@ -305,7 +209,7 @@ int Connector::sendMsg(const char* buffer, int nbytes)
 
     if (false == _connected)
     {
-        retcode = reconnect();
+//        retcode = reconnect();
         if (retcode != S_SUCCESS)
         {
             retval = retcode;
@@ -313,7 +217,7 @@ int Connector::sendMsg(const char* buffer, int nbytes)
         }
     }
 
-    if ( (retcode = _sock.send_all(buffer, nbytes)) < 0 )
+    if ( (retcode = Socket::send_all(buffer, nbytes)) < 0 )
     {
         DEBUGLOG("Connector::sendMsg| error:%d\n", retcode);
         retval = retcode;

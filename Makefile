@@ -32,17 +32,19 @@ HEADERS =
 SOURCES = pfauth.cpp \
 		  socket.cpp \
 		  mutex.cpp \
-		  connector.cpp \
 		  logger.cpp \
-		  main.cpp \
-		  thread.cpp
+		  thread.cpp \
+		  connector.cpp \
+		  sockwatcher.cpp \
+		  main.cpp
 OBJECTS = pfauth.o \
 		  socket.o \
 		  mutex.o \
-		  connector.o \
 		  logger.o \
-		  main.o \
-		  thread.o
+		  thread.o \
+		  connector.o \
+		  sockwatcher.o \
+		  main.o
 
 DESTDIR  = 
 TARGET   = pfauth

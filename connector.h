@@ -16,31 +16,44 @@ struct ConnProperty
 };
 
 
+
 class Connector : public uos::Socket
 {
+	friend class ConnPool;
+	enum CONN_STATE {
+		S_FREE,
+		S_CONNECTING,
+		S_READING,
+		S_WRITING,
+		S_DONE
+	};
 public:
-    Connector(const ConnProperty& proper);
+    Connector(){};
     ~Connector();
-
-    int userAuth(const char* user_name,
-        const char* password,
-        const char* game_id);
 
     int recvMsg(char* buffer, int* nbytes);
     int sendMsg(const char* buffer, int nbytes);
     
     int do_read()
     {
+    	return 1;
     }
     int do_write()
     {
+    	return 1;
     }
     
-    void setFlag(int flag)
+    void setFlag(uint32_t flag)
     {
-		_flag = flag;
+		_state = flag;
 		_last_active_time = time(0);
     }
+    
+    bool isFree()const { return (S_FREE == _state); }
+    bool isConnecting()const { return (S_CONNECTING == _state); }
+    bool isReading()const { return (S_READING == _state); }
+    bool isWriting()const { return (S_WRITING == _state); }
+    bool isDone()const { return (S_DONE == _state); }
     
     bool timeout()
     {
@@ -51,51 +64,47 @@ public:
     }
 
 protected:
-    int next_seq();
-    int reconnect();
     int disconnect();
 
 private:
-    ConnProperty    _proper;
-    uos::SockAddr   _remote_addr;
-    uos::Socket     _sock;
-
     bool        _connected;
     time_t      _last_active_time;
-    int		_timeout;
+    uint32_t	_timeout;
     uint32_t    _sequence;
 
-	char*	_wr_buf;
-	char*	_rd_buf;
-	int		_wr_idx;
-	int		_rd_idx;
+	char*		_wr_buf;
+	char*		_rd_buf;
+	uint32_t	_wr_size;
+	uint32_t	_rd_size;
+	uint32_t	_wr_idx;
+	uint32_t	_rd_idx;
 
-	int		_buf_size;
-
-	bool	_flag;
+	uint32_t	_state;
 
 };
 
-typedef void (*GetReqFunc)(char*, int*, int*);
-typedef void (*SetResFunc)(int, const char*, int, int);
+typedef int (*GetReqFunc)(char*, uint32_t*, uint32_t*);
+typedef int (*SetResFunc)(int32_t, const char*, uint32_t, uint32_t);
+
+
+struct ConnProp
+{
+	std::string remote_host;
+	uint32_t	remote_port;
+	uint32_t	timeout_secs;
+	
+	
+};
 
 class ConnPool : public uos::Thread
 {
-	friend class Connector;
-	enum CONN_FLAG{
-			F_FREE,
-			F_CONNECTING,
-			F_READING,
-			F_WRITING,
-			F_DONE
-	};
 public:
-	ConnPool(int size, GetReqFunc pfn_req, SetResFunc pfn_res, const ConnProperty& proper)
+	ConnPool(uint32_t size, GetReqFunc pfn_req, SetResFunc pfn_res, const ConnProp& prop)
 	{
 		_conn_size = size;
 		_pfn_req = pfn_req;
 		_pfn_res = pfn_res;
-		int max = 10;//_watch.getmaxfiles();
+		uint32_t max = 10;//_watch.getmaxfiles();
 		_conn_size = (max <= size) ? max : size;
 		_conn = new Connector[_conn_size];
 		
@@ -109,13 +118,16 @@ public:
     
 private:
 	Connector*	_conn;
-	int		_conn_size;
-	int		_conn_cnt;
+	uint32_t	_conn_size;
+	uint32_t	_conn_cnt;
 	
 	SockWatcher	_watch;
 	
 	GetReqFunc _pfn_req;
 	SetResFunc _pfn_res;
+	bool		_terminate;
+	
+	ConnProp	_prop;
 };
 
 #endif//(_CONNECTOR_H)

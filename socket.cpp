@@ -13,6 +13,7 @@
 #   include <io.h>
 #else
 #   include <netdb.h>
+#	include <fcntl.h>
 #endif
 
 
@@ -130,7 +131,22 @@ int Socket::shutdown(int how)
     return 1;
 }
 
-int Socket::setsockopt(int level, int optname, const char* optval, int optlen)
+int Socket::getsockopt(int level, int optname, void* optval, int* optlen)
+{
+    if (-1 == _sock_fd)
+    {
+        return E_SYS_NET_INVALID;
+    }
+    if ( -1 == ::getsockopt(_sock_fd, level, optname, optval, (socklen_t*)optlen) )
+    {
+        printf("Get `%d|%d' option failed: %d: %s\n", level, optname, errno, strerror(errno));
+        return (SOCK_ERR_BASE - errno);
+    }
+    return 1;
+
+}
+
+int Socket::setsockopt(int level, int optname, const void* optval, int optlen)
 {
     if (-1 == _sock_fd)
     {
@@ -153,7 +169,7 @@ int Socket::setblocking(bool flag)
         return E_SYS_NET_INVALID;
     }
 
-    flags = fcntl( fd, F_GETFL, 0 );
+    flags = fcntl( _sock_fd, F_GETFL, 0 );
     if (-1 == flags)
     {
     	printf("Get flag failed: %d: %s\n", errno, strerror(errno));
@@ -167,7 +183,7 @@ int Socket::setblocking(bool flag)
 
     if ( newflags != flags )
     {
-        flags = fcntl( fd, F_SETFL, newflags );
+        flags = fcntl( _sock_fd, F_SETFL, newflags );
 	    if (-1 == flags)
 	    {
 	    	printf("Set `%d' flag failed: %d: %s\n", newflags, errno, strerror(errno));
@@ -189,14 +205,14 @@ int Socket::settimeout(int millisecs)
     tv.tv_sec   = millisecs / 1000;
     tv.tv_usec  = (millisecs % 1000) * 1000;
 
-    retcode = this->setsockopt(SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv));
+    retcode = this->setsockopt(SOL_SOCKET, SO_RCVTIMEO, (void*)&tv, sizeof(tv));
     if ( retcode != 1 )
     {
         printf("Set receive timeout failed: %d: %s\n", errno, strerror(errno));
         return retcode;
     }
 
-    retcode = this->setsockopt(SOL_SOCKET, SO_SNDTIMEO, (char*)&tv, sizeof(tv));
+    retcode = this->setsockopt(SOL_SOCKET, SO_SNDTIMEO, (void*)&tv, sizeof(tv));
     if ( retcode != 1 )
     {
         printf("Set send timeout failed: %d: %s\n", errno, strerror(errno));
@@ -321,6 +337,11 @@ SockAddr::SockAddr(const char* host_name, int port)
         _ip4 = ntohl( ( (sockaddr_in*)ai_list->ai_addr )->sin_addr.s_addr );
         freeaddrinfo(ai_list);
     }
+}
+
+SockAddr::SockAddr(const std::string& host, int port)
+{
+	SockAddr(host.c_str(), port);
 }
 
 std::string SockAddr::IPString() const

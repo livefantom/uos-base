@@ -12,11 +12,12 @@ struct AuthMsg
 	*/
 	int val;
 	int state;
-}
+};
 
-typedef map<int, AuthMsg> MsgMap;
-typedef pair<int, AuthMsg> MsgPair;
+typedef std::map<int, AuthMsg> MsgMap;
+typedef std::pair<int, AuthMsg> MsgPair;
 typedef MsgMap::iterator MsgIter;
+
 MsgMap g_msg_map;
 
 void getOneRequest(char* buffer, int* nbytes, int* sequence)
@@ -29,7 +30,7 @@ void getOneRequest(char* buffer, int* nbytes, int* sequence)
         {
         	strcpy(buffer, "GET / HTTP1.1");
         	*nbytes = strlen(buffer);
-        	*sequence = item->first;
+        	*sequence = iter->first;
         	msg.state = 1;
             ++iter;
         }
@@ -66,19 +67,24 @@ protected:
 		int i = 0;
 		while(1)
 		{
-			i++;
+			++i;
 			if ( g_msg_map.size() > 1024 )
 			{
-	        	printf("sent msg reponse to GS[no memory], sequence :%d", iter->first);
+	        	printf("sent msg reponse to GS[no memory], sequence :%d", i);
 			}
 			else
 			{
-				g_msg_map.insert( MsgPair( i, AuthMsg(i, 0) ) );
+				AuthMsg msg;
+				msg.val = i;
+				msg.state = 0;
+				g_msg_map.insert( MsgPair(i, msg) );
 			}
+
+			// check work.
 		    MsgIter iter = g_msg_map.begin();
 		    while (!g_msg_map.empty() && iter != g_msg_map.end())
 		    {
-		        uint64_t ullTickCount = GetTickCount();
+		        //uint64_t ullTickCount = GetTickCount();
 		        AuthMsg msg = iter->second;
 		        //if (ullTickCount > msg.nLastTickCount + msg.nTimeout)
 		        if (msg.state == 2)
@@ -92,7 +98,7 @@ protected:
 		        }
 		    }
 			usleep(100*1000);
-		}
+		}// end of while.
 	}
 };
 

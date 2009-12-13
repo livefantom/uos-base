@@ -50,6 +50,9 @@ public:
     // Return the timeout option value in milliseconds of the socket.
     int gettimeout() const;
 
+    // Return the value of the given socket option.
+    int getsockopt(int level, int optname, void* optval, int* optlen);
+
     // Listen for connections made to the socket.
 	int listen(int backlog = SOMAXCONN);
 
@@ -66,7 +69,7 @@ public:
     int settimeout(int millisecs);
 
     // Set the value of the given socket option.
-    int setsockopt(int level, int optname, const char* optval, int optlen);
+    int setsockopt(int level, int optname, const void* optval, int optlen);
 
     // Shut down one or both halves of the connection.
     int shutdown(int how = SHUT_RDWR);
@@ -97,8 +100,10 @@ uint32_t ip2long(const std::string& ip4_string);
 // class SockAddr
 class SockAddr
 {
+	friend class Socket;
 public:
 	SockAddr(const char* host_name, int port);
+	SockAddr(const std::string& host, int port);
 	SockAddr(uint32_t ip4, int port):_ip4(ip4),_port(port){}
 
     std::string IPString() const;
@@ -108,7 +113,6 @@ private:
 	uint32_t	_ip4;
 	uint16_t	_port;
 	uint8_t		_ip6[16];
-	friend class Socket;
 };
 
 

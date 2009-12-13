@@ -88,7 +88,7 @@ Connector* PfAuth::createConn()
     ConnProperty& proper = PfAuth::singleton()->_cfg.conn_proper;
     try
     {
-        conn = new Connector(proper);
+//        conn = new ConnPool(proper);
         _log.info("PfAuth::createConn| Create one new connector!\n");
     }
     catch (...)
