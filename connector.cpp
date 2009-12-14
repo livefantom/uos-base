@@ -56,7 +56,9 @@ void ConnPool::run()
     			}
     			catch (...)
     			{
-    				;
+    				// TODO: 连接调用失败，就关闭释放文件描述符。
+    				_conn[i].close();
+    				continue;
     			}
 				_conn[i].setFlag( Connector::S_CONNECTING );
     			// select for reading and writing.
@@ -65,7 +67,6 @@ void ConnPool::run()
 			}
 			else if ( _conn[i].isDone() && true != _conn[i].timeout() )
 			{
-				// TODO: req_func();
 				retcode = _pfn_req( _conn[i]._wr_buf, &_conn[i]._wr_size, &_conn[i]._sequence );
 				if (retcode != 1)
 					continue;
@@ -95,15 +96,10 @@ void ConnPool::run()
 				// if read over & not close.
 				// TODO: res_func();
 				_pfn_res( retcode, _conn[i]._rd_buf, _conn[i]._rd_size, _conn[i]._sequence );
+				// reset conn status
 				_conn[i]._sequence = 0;
 				_watch.del_fd(_conn[i].fileno());
 				_conn[i].setFlag( Connector::S_DONE );
-
-				// get another request.
-				// TODO: req_func();
-				//if (ret != 1)
-				//	continue;
-
 			}
 			else if ( _conn[i].isWriting() && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
 			{
@@ -123,7 +119,8 @@ void ConnPool::run()
 					_conn[i].close();
 					_watch.del_fd(_conn[i].fileno());
 					_conn[i].setFlag( Connector::S_FREE );
-					// TODO: res_func();
+					// response to GS.
+					_pfn_res( -301, _0, 0, _conn[i]._sequence );
 				}
 			}
 		}// end of for.
