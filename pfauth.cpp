@@ -37,7 +37,7 @@ int PfAuth::initialize(const char* conf_path)
     }
     conf.getStringVal("svr_name", _cfg.conn_proper.svr_name);
     conf.getStringVal("cmd_key", _cfg.conn_proper.cmd_key);
-	conf.getStringVal("content_type", _cfg.conn_proper.content_type, "application/x-www-form-urlencoded");
+    conf.getStringVal("content_type", _cfg.conn_proper.content_type, "application/x-www-form-urlencoded");
     conf.getIntVal("svr_port", &_cfg.conn_proper.svr_port);
     conf.getIntVal("rcv_timeout", &_cfg.conn_proper.rcv_timeout, 5);
     conf.getIntVal("hb_interval", &_cfg.conn_proper.hb_interval, 15);
@@ -50,7 +50,7 @@ int PfAuth::initialize(const char* conf_path)
     printf("PfAuth config loaded successfully!\n");
 
     retcode = _log.initialize(_cfg.log_path, _cfg.log_file_sz*1024, NULL,
-        (uos::Logger::LOG_LEVEL)_cfg.log_level);
+                              (uos::Logger::LOG_LEVEL)_cfg.log_level);
     if (retcode != S_SUCCESS)
     {
         printf("PfAuth logger initialize failed!\n");

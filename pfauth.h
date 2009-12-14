@@ -11,21 +11,37 @@
 #include "logger.h"
 #include "mutex.h"
 #include "connector.h"
+#include <map>
 
 #ifndef MAX_PATH
 #   define MAX_PATH 510
 #endif
+
+
+struct AuthMsg
+{
+	/*
+	std::string time;
+	std::string flag;
+	std::string user_name;
+	std::string user_id;
+	*/
+	int val;
+	int state;
+};
+
+
+typedef std::map<int, AuthMsg> MsgMap;
+typedef std::pair<int, AuthMsg> MsgPair;
+typedef MsgMap::iterator MsgIter;
+
 
 struct PfAuthCfg
 {
     char    log_path[MAX_PATH];
     int     log_level;
     int     log_file_sz;
-#ifdef _BAIDU_
-	char    api_key[129];
-	char    version[9];
-	char    app_secret[129];
-#endif
+
     ConnProperty    conn_proper;
 };
 
@@ -39,8 +55,8 @@ public:
     Connector* createConn();
     void releaseConn(Connector* conn);
 private:
-    inline PfAuth(){};
-    inline ~PfAuth(){};
+    PfAuth(){};
+    ~PfAuth(){};
 
     static PfAuth* _instance;
     static uos::Mutex _mtx;

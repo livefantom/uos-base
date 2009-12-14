@@ -175,7 +175,7 @@ int Socket::setblocking(bool flag)
     	printf("Get flag failed: %d: %s\n", errno, strerror(errno));
         return (SOCK_ERR_BASE - errno);
     }
-    
+
     if ( false == flag )
         newflags = flags | (int) O_NDELAY;
     else
@@ -221,6 +221,51 @@ int Socket::settimeout(int millisecs)
     return 1;
 }
 
+int Socket::recv(char* buffer, int nbytes, int flags /* = 0 */)
+{
+    if (-1 == _sock_fd)
+    {
+        return E_SYS_NET_INVALID;
+    }
+    int nrecv = 0;
+    while (true)
+    {
+        if ( -1 == (nrecv = Socket::recv(_sock_fd, buffer, nbytes, flags)) )
+        {
+            printf("Socket | Receive data failed: %d: %s\n", errno, strerror(errno));
+            if (EINTR == errno)
+            {
+                nrecv = 0;
+                continue;
+            }
+            else if (ECONNRESET == errno || ENOTCONN == errno || EPIPE == errno)
+            {
+                return E_SYS_NET_CLOSED;
+            }
+            else if (ETIMEDOUT == errno || EAGAIN == errno)
+            {
+                return E_SYS_NET_TIMEOUT;
+            }
+            else
+            {
+                return (SOCK_ERR_BASE - errno);
+            }
+        }
+        else
+        {
+            return nrecv;
+        }
+    }
+}
+
+int Socket::send(const char* buffer, int nbytes, int flags /* = 0 */)
+{
+    if (-1 == _sock_fd)
+    {
+        return E_SYS_NET_INVALID;
+    }
+    return ::send(_sock_fd, buffer, nbytes, flags);
+}
 
 int Socket::recv_into(char* buffer, int nbytes, int flags /* = 0 */)
 {
@@ -337,11 +382,6 @@ SockAddr::SockAddr(const char* host_name, int port)
         _ip4 = ntohl( ( (sockaddr_in*)ai_list->ai_addr )->sin_addr.s_addr );
         freeaddrinfo(ai_list);
     }
-}
-
-SockAddr::SockAddr(const std::string& host, int port)
-{
-	SockAddr(host.c_str(), port);
 }
 
 std::string SockAddr::IPString() const

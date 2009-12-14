@@ -2,22 +2,6 @@
 #include <cstdio>
 #include <map>
 
-struct AuthMsg
-{
-	/*
-	std::string time;
-	std::string flag;
-	std::string user_name;
-	std::string user_id;
-	*/
-	int val;
-	int state;
-};
-
-typedef std::map<int, AuthMsg> MsgMap;
-typedef std::pair<int, AuthMsg> MsgPair;
-typedef MsgMap::iterator MsgIter;
-
 MsgMap g_msg_map;
 
 void getOneRequest(char* buffer, int* nbytes, int* sequence)
@@ -106,6 +90,12 @@ int main()
 {
 	WorkThread* pth = new WorkThread();
 	pth->start();
+
+	PfAuth* auth = PfAuth::singleton();
+	auth->initialize("pfauth.conf");
+	auth->setRequest();
+	auth->getResponse();
+
 	pth->wait();
 	delete pth;
     return 0;
