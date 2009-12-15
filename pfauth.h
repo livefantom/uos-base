@@ -11,39 +11,11 @@
 #include "logger.h"
 #include "mutex.h"
 #include "connector.h"
-#include <map>
 
 #ifndef MAX_PATH
 #   define MAX_PATH 510
 #endif
 
-
-struct AuthMsg
-{
-	/*
-	std::string time;
-	std::string flag;
-	std::string user_name;
-	std::string user_id;
-	*/
-	int val;
-	int state;
-};
-
-
-typedef std::map<int, AuthMsg> MsgMap;
-typedef std::pair<int, AuthMsg> MsgPair;
-typedef MsgMap::iterator MsgIter;
-
-
-struct PfAuthCfg
-{
-    char    log_path[MAX_PATH];
-    int     log_level;
-    int     log_file_sz;
-
-    ConnProperty    conn_proper;
-};
 
 
 class PfAuth

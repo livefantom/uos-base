@@ -4,6 +4,11 @@
 #include "thread.h"
 #include "socket.h"
 #include "sockwatcher.h"
+#include "mutex.h"
+#include <map>
+
+
+#define CONN_BUF_SZ   4096
 
 struct ConnProperty
 {
@@ -15,6 +20,12 @@ struct ConnProperty
     int     hb_interval;    // heartbeat interval, by seconds.
 };
 
+struct ConnProp
+{
+    std::string remote_host;
+    uint32_t	remote_port;
+    uint32_t	timeout_secs;
+};
 
 
 class Connector : public uos::Socket
@@ -29,7 +40,7 @@ class Connector : public uos::Socket
         S_DONE
     };
 public:
-    Connector(){};
+    Connector(const ConnProp& prop);
     ~Connector();
 
     int do_read();
@@ -69,19 +80,26 @@ public:
 
     bool isTimeout() const
     {
-        return ( time(0) > _last_active_time + _timeout );
+        return ( time(0) > _last_active_time + _prop.timeout_secs );
     }
 
 protected:
+    Connector();
+	void setProp(const ConnProp& prop)
+	{
+		_prop = prop;
+	}
+
     int disconnect();
 
 private:
+	ConnProp	_prop;
+
     time_t      _last_active_time;
-    uint32_t	_timeout;
     uint32_t    _sequence;
 
-    char*		_wr_buf;
-    char*		_rd_buf;
+    char		_wr_buf[CONN_BUF_SZ];
+    char		_rd_buf[CONN_BUF_SZ];
     uint32_t	_wr_size;
     uint32_t	_rd_size;
     uint32_t	_wr_idx;
@@ -91,27 +109,53 @@ private:
 
 };
 
-typedef int (*GetReqFunc)(char*, uint32_t*, uint32_t*);
-typedef int (*SetResFunc)(int32_t, const char*, uint32_t, uint32_t);
 
-struct ConnProp
+struct AuthMsg
 {
-    std::string remote_host;
-    uint32_t	remote_port;
-    uint32_t	timeout_secs;
+	std::string user_id;
+	std::string user_name;
+	std::string time;
+	std::string flag;
+	int retcode;
+	int adult;
+	// process control.
+	time_t insert_time;
+	int state;
 };
+
+
+typedef std::map<int, AuthMsg> MsgMap;
+typedef std::pair<int, AuthMsg> MsgPair;
+typedef MsgMap::iterator MsgIter;
+
+std::string ftxy4399_request_encode(const AuthMsg& msg);
+void ftxy4399_response_decode(std::string res, AuthMsg& msg);
+
+
+struct PfAuthCfg
+{
+    char    log_path[MAX_PATH];
+    int     log_level;
+    int     log_file_sz;
+
+    ConnProperty    conn_proper;
+};
+
+
 
 class ConnPool : public uos::Thread
 {
 public:
-    ConnPool(uint32_t size, GetReqFunc pfn_req, SetResFunc pfn_res, const ConnProp& prop)
+    ConnPool(uint32_t size, const ConnProp& prop)
     {
         _conn_size = size;
-        _pfn_req = pfn_req;
-        _pfn_res = pfn_res;
         uint32_t max = 10;//_watch.getmaxfiles();
         _conn_size = (max <= size) ? max : size;
         _conn = new Connector[_conn_size];
+        for (uint32_t i=0; i< _conn_size; ++i)
+        {
+        	_conn[i].setProp(prop);
+        }
 
         // start to run.
         start();
@@ -119,7 +163,14 @@ public:
 
     ~ConnPool(){}
 
+    int sendRequest(const AuthMsg& req_msg, uint32_t req_seq);
+	int recvResponse(AuthMsg& res_msg, uint32_t* res_seq);
+
+protected:
     virtual void run();
+
+    int getRequest(char* buffer, uint32_t nbytes, uint32_t* sequence);
+    int setResponse(int retcode, const char* buffer, uint32_t nbytes, uint32_t sequence);
 
 private:
     Connector*	_conn;
@@ -128,11 +179,11 @@ private:
 
     SockWatcher	_watch;
 
-    GetReqFunc  _pfn_req;
-    SetResFunc  _pfn_res;
     bool		_terminate;
 
     ConnProp	_prop;
+    MsgMap		_msg_map;
+    uos::Mutex	_mtx;
 };
 
 #endif//(_CONNECTOR_H)

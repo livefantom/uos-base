@@ -230,7 +230,7 @@ int Socket::recv(char* buffer, int nbytes, int flags /* = 0 */)
     int nrecv = 0;
     while (true)
     {
-        if ( -1 == (nrecv = Socket::recv(_sock_fd, buffer, nbytes, flags)) )
+        if ( -1 == (nrecv = ::recv(_sock_fd, buffer, nbytes, flags)) )
         {
             printf("Socket | Receive data failed: %d: %s\n", errno, strerror(errno));
             if (EINTR == errno)
@@ -264,7 +264,35 @@ int Socket::send(const char* buffer, int nbytes, int flags /* = 0 */)
     {
         return E_SYS_NET_INVALID;
     }
-    return ::send(_sock_fd, buffer, nbytes, flags);
+    int nsend = 0;
+    while (true)
+    {
+        if ( -1 == (nsend = ::send(_sock_fd, buffer, nbytes, flags)) )
+        {
+            printf("Socket | Send data failed: %d: %s\n", errno, strerror(errno));
+            if ( EINTR == errno )
+            {
+                nsend = 0;
+                continue;
+            }
+            else if (ECONNRESET == errno || ENOTCONN == errno || EPIPE == errno)
+            {
+                return E_SYS_NET_CLOSED;
+            }
+            else if (EAGAIN == errno)
+            {
+                return E_SYS_NET_TIMEOUT;
+            }
+            else
+            {
+                return (SOCK_ERR_BASE - errno);
+            }
+        }
+        else
+        {
+            return nsend;
+        }
+    }
 }
 
 int Socket::recv_into(char* buffer, int nbytes, int flags /* = 0 */)
