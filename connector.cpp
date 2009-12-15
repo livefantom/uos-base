@@ -57,7 +57,7 @@ void Connector::run()
 	            else if ( _conn[i].isDone() && !_conn[i].isTimeout() )
 	            {
 	                // get one request.
-	                retcode = getRequest( _conn[i]._wr_buf, _conn[i]._wr_size, &_conn[i]._sequence );
+	                retcode = getRequest( _conn[i]._wr_buf, &_conn[i]._wr_size, &_conn[i]._sequence );
 	                if (retcode != S_SUCCESS)
 	                    continue;
 	                _conn[i].setState( Connection::S_WRITING );
@@ -90,7 +90,7 @@ void Connector::run()
             else if ( _conn[i].isDone() && !_conn[i].isTimeout() )
             {
                 // get one request.
-                retcode = getRequest( _conn[i]._wr_buf, _conn[i]._wr_size, &_conn[i]._sequence );
+                retcode = getRequest( _conn[i]._wr_buf, &_conn[i]._wr_size, &_conn[i]._sequence );
                 if (retcode != S_SUCCESS)
                     continue;
                 _conn[i].setState( Connection::S_WRITING );
@@ -106,7 +106,7 @@ void Connector::run()
                 {
 	                _watch.del_fd( _conn[i].fileno() );
 	                // get one request.
-	                retcode = getRequest( _conn[i]._wr_buf, _conn[i]._wr_size, &_conn[i]._sequence );
+	                retcode = getRequest( _conn[i]._wr_buf, &_conn[i]._wr_size, &_conn[i]._sequence );
 	                if (S_SUCCESS == retcode)
 	                {
 		                _conn[i].setState( Connection::S_WRITING );
@@ -178,11 +178,12 @@ void Connector::run()
                     _conn[i].disconnect();
                 }
             }
+            usleep(10);
         }// end of for.
     }
 }
 
-int Connector::getRequest(char* buffer, uint32_t nbytes, uint32_t* sequence)
+int Connector::getRequest(char* buffer, uint32_t* nbytes, uint32_t* sequence)
 {
 	int retval = -1;
 	_mtx.lock();
@@ -193,15 +194,19 @@ int Connector::getRequest(char* buffer, uint32_t nbytes, uint32_t* sequence)
         if (msg.state == 0)
         {
         	std::string req = ftxy4399_request_encode(msg);
-        	if ( nbytes >= req.length() )
+        	int len = req.length();
+        	if ( *nbytes >= len )
             {
-	        	strncpy(buffer, req.c_str(), nbytes);
+            	*nbytes = len;
+	        	strncpy(buffer, req.c_str(), *nbytes);
 	        	*sequence = iter->first;
 	        	// change state.
 	        	msg.state = 1;
 	            retval = S_SUCCESS;
 	            break;
 	        }
+	        else
+	        	printf("msg length is too big.\n");
         }
 	    ++iter;
     }
@@ -286,6 +291,7 @@ std::string ftxy4399_request_encode(const AuthMsg& msg)
 	std::string content = "user_id="+msg.user_id+"&user_name="+msg.user_name+"&time="+msg.time+"&flag="+msg.flag;
 	sprintf(buf, "%d", content.length());
 
+	return "POST /pp-pwd.php HTTP/1.1\r\nHost: 192.168.41.36\r\nPragma: no-cache\r\nAccept: */*\r\nContent-Length: 15\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nid=aaa&pass=abc";
     return "POST /api/ftxy/passport.php HTTP/1.1\r\n"
 		"Host: web.4399.com\r\n"
 		"Pragma: no-cache\r\n"

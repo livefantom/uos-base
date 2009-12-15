@@ -55,7 +55,7 @@ public:
 protected:
     virtual void run();
 
-    int getRequest(char* buffer, uint32_t nbytes, uint32_t* sequence);
+    int getRequest(char* buffer, uint32_t* nbytes, uint32_t* sequence);
     int setResponse(int retcode, const char* buffer, uint32_t nbytes, uint32_t sequence);
 
 private:

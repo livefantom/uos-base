@@ -25,8 +25,8 @@ Connection::Connection()
 
 	_rd_idx = 0;
 	_wr_idx = 0;
-	_rd_size = 0;
-	_wr_size = 0;
+	_rd_size = CONN_BUF_SZ;
+	_wr_size = CONN_BUF_SZ;
 
 	bzero(_rd_buf, CONN_BUF_SZ);
 	bzero(_wr_buf, CONN_BUF_SZ);
@@ -115,12 +115,14 @@ int Connection::do_read()
     	// TODO: parse msg.
         printf("recevied some msg, try to parse.\n");
         //parse_msg();
+        printf("\n%s\n", _rd_buf);
     }
     // remote closed, maybe whole msg received.
     else if ( _rd_idx > 0 && 0 == retcode )
     {
         printf("remote closed, maybe whole msg received.\n");
         //parse_msg();
+        
         retval = S_SUCCESS;
     }
     else if (retcode < 0 && retcode != E_SYS_NET_TIMEOUT)
