@@ -34,16 +34,18 @@ SOURCES = pfauth.cpp \
 		  mutex.cpp \
 		  logger.cpp \
 		  thread.cpp \
-		  connector.cpp \
 		  sockwatcher.cpp \
+		  connection.cpp \
+		  connector.cpp \
 		  main.cpp
 OBJECTS = pfauth.o \
 		  socket.o \
 		  mutex.o \
 		  logger.o \
 		  thread.o \
-		  connector.o \
 		  sockwatcher.o \
+		  connection.o \
+		  connector.o \
 		  main.o
 
 DESTDIR  = 

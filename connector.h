@@ -8,16 +8,6 @@
 #include <map>
 
 
-struct ConnProperty
-{
-    char    svr_name[MAX_PATH];
-    char    cmd_key[MAX_PATH];
-    char    content_type[MAX_PATH];
-    int     svr_port;
-    int     rcv_timeout;    // receive msg timeout, by milliseconds.
-    int     hb_interval;    // heartbeat interval, by seconds.
-};
-
 struct AuthMsg
 {
 	std::string user_id;
@@ -38,14 +28,6 @@ typedef MsgMap::iterator MsgIter;
 std::string ftxy4399_request_encode(const AuthMsg& msg);
 void ftxy4399_response_decode(std::string res, AuthMsg& msg);
 
-struct PfAuthCfg
-{
-    char    log_path[MAX_PATH];
-    int     log_level;
-    int     log_file_sz;
-
-    ConnProperty    conn_proper;
-};
 
 class Connector : public uos::Thread
 {
@@ -55,7 +37,7 @@ public:
         _conn_size = size;
         uint32_t max = 10;//_watch.getmaxfiles();
         _conn_size = (max <= size) ? max : size;
-        _conn = new Connector[_conn_size];
+        _conn = new Connection[_conn_size];
         for (uint32_t i=0; i< _conn_size; ++i)
         {
         	_conn[i].setProp(prop);
@@ -77,7 +59,7 @@ protected:
     int setResponse(int retcode, const char* buffer, uint32_t nbytes, uint32_t sequence);
 
 private:
-    Connector*	_conn;
+    Connection*	_conn;
     uint32_t	_conn_size;
     uint32_t	_conn_cnt;
 

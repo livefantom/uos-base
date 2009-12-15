@@ -2,19 +2,22 @@
 
 SockWatcher::SockWatcher()
 {
-    // TODO:get nfiles value!!!
+    size_limit();
+    init();
 }
 
 SockWatcher::~SockWatcher()
-{}
+{
+}
 
 
 int SockWatcher::add_fd( int fd, int rw )
 {
+	printf("SockWatcher::add_fd fd=%d, rw=%d, num=%d, size=%d\n", fd, rw, _sock_num, _size);
     // if socket number already reached the max limit.
     if ( _sock_num >= _size )
     {
-        printf("too many sockets in add_sock!\n");
+        printf("too many sockets in add_sock! count = %d\n", _sock_num);
         return -1;
     }
     // add socket to the set.
@@ -27,13 +30,20 @@ int SockWatcher::add_fd( int fd, int rw )
     case FDW_WRITE:
         FD_SET( fd, &_master_wset );
         break;
+    case FDW_RDWR:
+        FD_SET( fd, &_master_rset );
+        FD_SET( fd, &_master_wset );
+    	break;
     default:
         break;
     }
     if (fd > _maxfd)
         _maxfd = fd;
     // recode this socket index in the set.
-    _fd_idx[fd] = _sock_num;
+    if ( _fd_idx[fd] < 0 || _fd_idx[fd] > _size )
+    {
+	    _fd_idx[fd] = _sock_num;
+    }
     ++_sock_num;
     return 1;
 }
@@ -57,7 +67,7 @@ int SockWatcher::del_fd( int fd )
 
     if ( idx < 0 || idx > _size )
     {
-        printf("bad index `%d' in del_sock!\n", idx);
+        printf("bad index `%d' of file `%d' in del_fd!\n", idx, fd);
         return -1;
     }
 
@@ -77,6 +87,7 @@ int SockWatcher::del_fd( int fd )
     if ( fd >= _maxfd )
         _maxfd_changed = true;
 
+	printf("SockWatcher::del_fd fd=%d, num=%d, size=%d\n", fd, _sock_num, _size);
     return 1;
 }
 
@@ -160,6 +171,11 @@ int SockWatcher::maxfd()
         _maxfd_changed = false;
     }
     return _maxfd;
+}
+
+int SockWatcher::size_limit()
+{
+	return _size = FD_SETSIZE;
 }
 
 

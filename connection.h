@@ -9,15 +9,15 @@
 
 struct ConnProp
 {
-    std::string remote_host;
-    uint32_t	remote_port;
-    uint32_t	timeout_secs;
+    char remote_host[MAX_PATH];
+    int32_t	remote_port;
+    int32_t	timeout_secs;
 };
 
 
 class Connection : public uos::Socket
 {
-    friend class ConnPool;
+    friend class Connector;
     enum CONN_STATE
     {
         S_FREE,
@@ -67,7 +67,7 @@ public:
 
     bool isTimeout() const
     {
-        return ( time(0) > _last_active_time + _prop.timeout_secs );
+    	return ( time(0) > _last_active_time + _prop.timeout_secs );
     }
 
 protected:

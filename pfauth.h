@@ -17,6 +17,17 @@
 #endif
 
 
+struct PfAuthCfg
+{
+    char    log_path[MAX_PATH];
+    int     log_level;
+    int     log_file_sz;
+    
+    int 	pool_size;
+
+    ConnProp    conn_prop;
+};
+
 
 class PfAuth
 {

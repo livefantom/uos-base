@@ -21,7 +21,7 @@ using namespace std;
 #define CFGINFO PfAuth::singleton()->_cfg
 
 
-void ConnPool::run()
+void Connector::run()
 {
     // reserved for auto increas.
     _conn_cnt = _conn_size;
@@ -29,33 +29,63 @@ void ConnPool::run()
     // main loop
     while ( (! _terminate) || (_conn_cnt > 0) )
     {
-        nready = _watch.watch(-1);
+        nready = _watch.watch(0);
         if ( nready < 0 )
         {
             if (errno == EINTR || errno == EAGAIN )
                 continue;
-            printf("watch failed!\n");
+            printf("watch failed: %d: %s\n", errno, strerror(errno));
             break;
         }
-        // if no socket is ready, just test timeout!
+
+        // if no connection is ready, just test timeout!
+        int retcode = -1;
         if ( 0 == nready )
         {
-            // TODO: check timeout!!!
-            continue;
+	        for (uint32_t i = 0; i < _conn_cnt; ++i)
+	        {
+	        	// if some connection is free, load task.
+	            if ( _conn[i].isFree() )
+	            {
+	                retcode = _conn[i].do_connect();
+	                if (retcode != S_SUCCESS)
+	                    continue;
+	                _conn[i].setState( Connection::S_CONNECTING );
+	                // select for reading and writing.
+	                _watch.add_fd( _conn[i].fileno() , FDW_RDWR );
+	            }
+	            else if ( _conn[i].isDone() && !_conn[i].isTimeout() )
+	            {
+	                // get one request.
+	                retcode = getRequest( _conn[i]._wr_buf, _conn[i]._wr_size, &_conn[i]._sequence );
+	                if (retcode != S_SUCCESS)
+	                    continue;
+	                _conn[i].setState( Connection::S_WRITING );
+	                _watch.add_fd( _conn[i].fileno(), FDW_WRITE );
+	            }
+	            else if ( _conn[i].isTimeout() )
+                {
+                	if ( !_conn[i].isDone() )
+                	{
+	                    setResponse( E_SYS_NET_TIMEOUT, 0, 0, _conn[i]._sequence );
+	                    _watch.del_fd( _conn[i].fileno() );
+                	}
+                    _conn[i].disconnect();
+                }
+	        }
+	        continue;
         }
 
-        int retcode = -1;
         for (uint32_t i = 0; i < _conn_cnt; ++i)
         {
             if ( _conn[i].isFree() )
             {
-                _conn[i].do_connect();
+                retcode = _conn[i].do_connect();
                 if (retcode != S_SUCCESS)
                     continue;
-                _conn[i].setState( Connector::S_CONNECTING );
+                _conn[i].setState( Connection::S_CONNECTING );
                 // select for reading and writing.
-                _watch.add_fd( _conn[i].fileno() , FDW_READ );
-                _watch.add_fd( _conn[i].fileno() , FDW_WRITE );
+                _watch.add_fd( _conn[i].fileno() , FDW_RDWR );
             }
             else if ( _conn[i].isDone() && !_conn[i].isTimeout() )
             {
@@ -63,7 +93,7 @@ void ConnPool::run()
                 retcode = getRequest( _conn[i]._wr_buf, _conn[i]._wr_size, &_conn[i]._sequence );
                 if (retcode != S_SUCCESS)
                     continue;
-                _conn[i].setState( Connector::S_WRITING );
+                _conn[i].setState( Connection::S_WRITING );
                 _watch.add_fd( _conn[i].fileno(), FDW_WRITE );
             }
             else if ( _conn[i].isConnecting()
@@ -71,12 +101,26 @@ void ConnPool::run()
                     )
             {
                 // continue connect.
-                _conn[i].do_connect();
-                if (retcode != S_SUCCESS)
-                    continue;
-                _watch.del_fd( _conn[i].fileno() );
-                _conn[i].setState( Connector::S_WRITING );
-                _watch.add_fd( _conn[i].fileno(), FDW_WRITE );
+                retcode = _conn[i].do_connect();
+                if (S_SUCCESS == retcode)
+                {
+	                _watch.del_fd( _conn[i].fileno() );
+	                // get one request.
+	                retcode = getRequest( _conn[i]._wr_buf, _conn[i]._wr_size, &_conn[i]._sequence );
+	                if (S_SUCCESS == retcode)
+	                {
+		                _conn[i].setState( Connection::S_WRITING );
+		                _watch.add_fd( _conn[i].fileno(), FDW_WRITE );
+	                }
+	                else
+	                	_conn[i].setState( Connection::S_DONE );
+                }
+                else
+                {
+	                _watch.del_fd( _conn[i].fileno() );
+	                _conn[i].setState( Connection::S_FREE );
+                	_conn[i].disconnect();
+                }
             }
             else if ( _conn[i].isReading() && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
             {
@@ -91,7 +135,7 @@ void ConnPool::run()
 	                // work over!!
 	                if ( _conn[i].isReading() )
 	                {
-		                _conn[i].setState( Connector::S_DONE );
+		                _conn[i].setState( Connection::S_DONE );
 	                }// else connection is Free status.
                 }
                 // else if connection closed with error.
@@ -104,25 +148,22 @@ void ConnPool::run()
                 }
                 // else continue read.
             }
-            else if ( _conn[i].isWriting() && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
+            else if ( _conn[i].isWriting() && _watch.check_fd( _conn[i].fileno(), FDW_WRITE ) )
             {
                 retcode = _conn[i].do_write();
-                if (retcode != S_SUCCESS)
-                    continue;
                 // if write over, prepare for reading response.
                 if (S_SUCCESS == retcode)
                 {
-	                _conn[i].setState( Connector::S_READING );
+	                _conn[i].setState( Connection::S_READING );
 	                _watch.del_fd( _conn[i].fileno() );
 	                _watch.add_fd( _conn[i].fileno(), FDW_READ );
 	            }
-                // else if connection closed with error.
-                else if ( _conn[i].isFree() )
+                // if socket is not invalid, remove it.
+	            else if (E_SYS_NET_INVALID == retcode)
                 {
 	                setResponse( E_SYS_NET_INVALID, 0, 0, _conn[i]._sequence );
-	                // reset conn status
-	                _conn[i]._sequence = 0;
-	                _watch.del_fd( _conn[i].fileno() );
+                    _watch.del_fd( _conn[i].fileno() );
+                    _conn[i].disconnect();
                 }
                 // else continue write.
             }
@@ -130,20 +171,18 @@ void ConnPool::run()
             {
                 if ( _conn[i].isTimeout() )
                 {
+                	printf("socket `%d' is timeout!\n", _conn[i].fileno());
                     // response to GS.
                     setResponse( E_SYS_NET_TIMEOUT, 0, 0, _conn[i]._sequence );
-                    _conn[i].close();
                     _watch.del_fd( _conn[i].fileno() );
-                    _conn[i].setState( Connector::S_FREE );
+                    _conn[i].disconnect();
                 }
             }
         }// end of for.
-
     }
-
 }
 
-int ConnPool::getRequest(char* buffer, uint32_t nbytes, uint32_t* sequence)
+int Connector::getRequest(char* buffer, uint32_t nbytes, uint32_t* sequence)
 {
 	int retval = -1;
 	_mtx.lock();
@@ -160,16 +199,17 @@ int ConnPool::getRequest(char* buffer, uint32_t nbytes, uint32_t* sequence)
 	        	*sequence = iter->first;
 	        	// change state.
 	        	msg.state = 1;
-	            ++iter;
 	            retval = S_SUCCESS;
+	            break;
 	        }
         }
+	    ++iter;
     }
 	_mtx.unlock();
 	return retval;
 }
 
-int ConnPool::setResponse(int retcode, const char* buffer, uint32_t nbytes, uint32_t sequence)
+int Connector::setResponse(int retcode, const char* buffer, uint32_t nbytes, uint32_t sequence)
 {
 	int retval = -1;
 	_mtx.lock();
@@ -192,7 +232,7 @@ int ConnPool::setResponse(int retcode, const char* buffer, uint32_t nbytes, uint
 	return retval;
 }
 
-int ConnPool::sendRequest(const AuthMsg& req_msg, uint32_t sequence)
+int Connector::sendRequest(const AuthMsg& req_msg, uint32_t sequence)
 {
 	int retval = -1;
 	_mtx.lock();
@@ -210,7 +250,7 @@ int ConnPool::sendRequest(const AuthMsg& req_msg, uint32_t sequence)
 	return retval;
 }
 
-int ConnPool::recvResponse(AuthMsg& res_msg, uint32_t* sequence)
+int Connector::recvResponse(AuthMsg& res_msg, uint32_t* sequence)
 {
 	int retval = -1;
 	_mtx.lock();
@@ -221,11 +261,10 @@ int ConnPool::recvResponse(AuthMsg& res_msg, uint32_t* sequence)
         if (0 == msg.state)
         {
         	// TODO: check timeout.
-        	;
+        	++iter;
         }
         else if (2 == msg.state)
         {
-        	printf("sent msg reponse to GS[OK], sequence :%d", iter->first);
         	res_msg = msg;
         	*sequence = iter->first;
             _msg_map.erase(iter++);

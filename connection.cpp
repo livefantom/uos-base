@@ -1,27 +1,23 @@
 #include "connector.h"
 #include <OperationCode.h>
 #include <time.h>
-#include "pfauth.h"
-#include <SysTimeValue.h>
 #include <iostream>
 #include <string>
 
-
-using namespace std;
-
-#define SEQ_INIT_VAL    0xFFFF
 
 #ifdef E_ERROR
 #   undef E_ERROR
 #   define E_ERROR      -1
 #endif
 
-#define INFOLOG PfAuth::singleton()->_log.info
-#define DEBUGLOG    PfAuth::singleton()->_log.debug
-#define CFGINFO PfAuth::singleton()->_cfg
-
 
 Connection::Connection(const ConnProp& prop)
+{
+	Connection();
+	setProp(prop);
+}
+
+Connection::Connection()
 {
 	_sequence = 0;
 	_state = 0;
@@ -31,7 +27,6 @@ Connection::Connection(const ConnProp& prop)
 	_wr_idx = 0;
 	_rd_size = 0;
 	_wr_size = 0;
-	setProp(prop);
 
 	bzero(_rd_buf, CONN_BUF_SZ);
 	bzero(_wr_buf, CONN_BUF_SZ);
@@ -56,32 +51,36 @@ int Connection::disconnect()
     retcode = Socket::close();
 
 	setState( S_FREE );
-    INFOLOG("Connection::disconnect| Connection closed!\n");
+    printf("Connection::disconnect| Connection closed!\n");
     return S_SUCCESS;
 }
 
 int Connection::do_connect()
 {
     int retcode = E_ERROR;
+    int retval = E_ERROR;
     if ( isFree() )
     {
         Socket::socket(AF_INET, SOCK_STREAM, 0);
         Socket::setblocking(false);
         try
         {
-            retcode = Socket::connect( uos::SockAddr(_prop.remote_host, _prop.remote_port) );
-            // TODO: deal with connect.
-            if (-1  == retcode)
-            {
-            	return -1;
-            }
-	        return S_SUCCESS;
+        	uos::SockAddr addr(_prop.remote_host, _prop.remote_port);
+        	retcode = Socket::connect( addr );
+			if ( S_SUCCESS == retcode || E_SYS_NET_TIMEOUT == retcode)
+	        {
+			    retval = S_SUCCESS;
+	        }
+	        else
+	        {
+	            Socket::close();
+	            setState( S_FREE );
+	        }
         }
         catch (...)
         {
             Socket::close();
             setState( S_FREE );
-            return -1;
         }
     }
     else if ( isConnecting() )
@@ -90,15 +89,16 @@ int Connection::do_connect()
         int n = sizeof(error);
         if ( Socket::getsockopt(SOL_SOCKET, SO_ERROR, &error, &n) < 0 || error != 0 )
         {
-            printf("nonblocking connect failed!\n");
-            Socket::close();
-            setState( S_FREE );
-            return -1;
+            printf("nonblocking connect failed: %d: %s\n", error, strerror(error));
+            retval = E_SYS_NET_INVALID;
         }
-	    printf("connection established!\n");
-    	return S_SUCCESS;
+        else
+        {
+		    printf("connection established!\n");
+	    	retval = S_SUCCESS;
+        }
     }
-
+    return retval;
 }
 
 int Connection::do_read()
@@ -123,15 +123,9 @@ int Connection::do_read()
         //parse_msg();
         retval = S_SUCCESS;
     }
-    else if (E_SYS_NET_INVALID == retcode)
-    {
-        setState( S_FREE );
-        retval = E_SYS_NET_INVALID;
-    }
     else if (retcode < 0 && retcode != E_SYS_NET_TIMEOUT)
     {
-        DEBUGLOG("Connection::recvMsg| Detected connection error:%d\n", retcode);
-        this->disconnect();
+        printf("Connection::do_read| Detected connection error:%d\n", retcode);
         retval = E_SYS_NET_INVALID;
     }
 
@@ -141,6 +135,7 @@ int Connection::do_read()
 
 int Connection::do_write()
 {
+	printf("Connection::do_write | fd=%d, wr_size=%d\n", fileno(), _wr_size);
     int retcode = E_ERROR;
     int retval  = E_ERROR;
 
@@ -157,15 +152,9 @@ int Connection::do_write()
     {
     	retval = E_SYS_NET_TIMEOUT;
     }
-    else if ( E_SYS_NET_INVALID == retcode )
-    {
-        setState( S_FREE );
-        retval = E_SYS_NET_INVALID;
-    }
     else if (retval < 0 && retval != E_SYS_NET_TIMEOUT)
     {
-        DEBUGLOG("Connection::sendMsg| Detected connection error:%d\n", retval);
-        this->disconnect();
+        printf("Connection::do_write| Detected connection error:%d\n", retval);
         retval = E_SYS_NET_INVALID;
     }
 

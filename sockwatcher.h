@@ -7,6 +7,7 @@
 
 #define FDW_READ 1
 #define FDW_WRITE 2
+#define FDW_RDWR 3
 
 
 class SockWatcher
@@ -24,6 +25,7 @@ public:
     int init();
     int watch( long timeout_msecs );
     int maxfd();
+    int size_limit();
 
 private:
     fd_set	_master_rset;

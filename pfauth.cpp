@@ -35,12 +35,13 @@ int PfAuth::initialize(const char* conf_path)
         printf("PfAuth config load failed!\n");
         return E_ERROR;
     }
-    conf.getStringVal("svr_name", _cfg.conn_proper.svr_name);
-    conf.getStringVal("cmd_key", _cfg.conn_proper.cmd_key);
-    conf.getStringVal("content_type", _cfg.conn_proper.content_type, "application/x-www-form-urlencoded");
-    conf.getIntVal("svr_port", &_cfg.conn_proper.svr_port);
-    conf.getIntVal("rcv_timeout", &_cfg.conn_proper.rcv_timeout, 5);
-    conf.getIntVal("hb_interval", &_cfg.conn_proper.hb_interval, 15);
+    conf.getStringVal("svr_name", _cfg.conn_prop.remote_host);
+//    conf.getStringVal("cmd_key", _cfg.conn_prop.cmd_key);
+//    conf.getStringVal("content_type", _cfg.conn_prop.content_type, "application/x-www-form-urlencoded");
+    conf.getIntVal("svr_port", &_cfg.conn_prop.remote_port);
+    conf.getIntVal("rcv_timeout", &_cfg.conn_prop.timeout_secs, 5);
+//    conf.getIntVal("hb_interval", &_cfg.conn_prop.hb_interval, 15);
+    conf.getIntVal("pool_size", &_cfg.pool_size, 10);
 
     conf.getStringVal("log_path", _cfg.log_path, "log");
     conf.getIntVal("log_level", &_cfg.log_level, 4);
@@ -80,10 +81,11 @@ int PfAuth::release()
 Connector* PfAuth::createConn()
 {
     Connector* conn = NULL;
-    ConnProperty& proper = PfAuth::singleton()->_cfg.conn_proper;
+
+    PfAuthCfg& cfg = PfAuth::singleton()->_cfg;
     try
     {
-//        conn = new ConnPool(proper);
+        conn = new Connector(cfg.pool_size, cfg.conn_prop);
         _log.info("PfAuth::createConn| Create one new connector!\n");
     }
     catch (...)
