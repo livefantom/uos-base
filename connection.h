@@ -97,7 +97,6 @@ private:
 };
 
 
-
 #endif//(_CONNECTION_H)
 
 

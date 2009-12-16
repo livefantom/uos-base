@@ -50,6 +50,14 @@ int Connection::disconnect()
     retcode = Socket::setsockopt(SOL_SOCKET, SO_LINGER, (char*)&lg, sizeof(lg));
     retcode = Socket::close();
 
+	_rd_idx = 0;
+	_wr_idx = 0;
+	_rd_size = CONN_BUF_SZ;
+	_wr_size = CONN_BUF_SZ;
+
+	bzero(_rd_buf, CONN_BUF_SZ);
+	bzero(_wr_buf, CONN_BUF_SZ);
+
 	setState( S_FREE );
     printf("Connection::disconnect| Connection closed!\n");
     return S_SUCCESS;
@@ -108,24 +116,32 @@ int Connection::do_read()
 
     retcode = Socket::recv(_rd_buf + _rd_idx, _rd_size - _rd_idx);
     if (retcode > 0)
-    	_rd_idx += retcode;
-    // recevied some msg, try to parse.
-    if ( _rd_idx > 0 && E_SYS_NET_TIMEOUT == retcode ) // EAGAIN
     {
-    	// TODO: parse msg.
+    	_rd_idx += retcode;
+		// recevied some msg, try to parse.
         printf("recevied some msg, try to parse.\n");
-        //parse_msg();
-        printf("\n%s\n", _rd_buf);
+    	// TODO: parse_msg();
+    	retval = E_SYS_NET_TIMEOUT;
     }
     // remote closed, maybe whole msg received.
-    else if ( _rd_idx > 0 && 0 == retcode )
+    else if ( 0 == retcode )
     {
-        printf("remote closed, maybe whole msg received.\n");
-        //parse_msg();
-        
-        retval = S_SUCCESS;
+        setState( S_DONE );
+    	if ( _rd_idx > 0 )
+    	{
+	        printf("remote closed, maybe whole msg received.\n");
+	        retval = S_SUCCESS;
+    	}
+    	else
+    	{
+			retval = E_SYS_NET_INVALID;
+    	}
     }
-    else if (retcode < 0 && retcode != E_SYS_NET_TIMEOUT)
+    else if ( E_SYS_NET_TIMEOUT == retcode ) // unreasonable error!!!
+    {
+    	retval = E_SYS_NET_TIMEOUT;
+    }
+    else
     {
         printf("Connection::do_read| Detected connection error:%d\n", retcode);
         retval = E_SYS_NET_INVALID;
@@ -149,8 +165,7 @@ int Connection::do_write()
     {
     	retval = S_SUCCESS;
     }
-    // send partly, wait for send again.
-    else if ( E_SYS_NET_TIMEOUT == retcode )
+    else if ( E_SYS_NET_TIMEOUT == retcode ) // unreasonable error!!!
     {
     	retval = E_SYS_NET_TIMEOUT;
     }
@@ -159,10 +174,10 @@ int Connection::do_write()
         printf("Connection::do_write| Detected connection error:%d\n", retval);
         retval = E_SYS_NET_INVALID;
     }
+    // else, partly sended, wait for send again.
 
     return retval;
 }
-
 
 
 

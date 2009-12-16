@@ -13,7 +13,7 @@ SockWatcher::~SockWatcher()
 
 int SockWatcher::add_fd( int fd, int rw )
 {
-	printf("SockWatcher::add_fd fd=%d, rw=%d, num=%d, size=%d\n", fd, rw, _sock_num, _size);
+//	printf("SockWatcher::add_fd fd=%d, rw=%d, num=%d, size=%d\n", fd, rw, _sock_num, _size);
     // if socket number already reached the max limit.
     if ( _sock_num >= _size )
     {
@@ -87,7 +87,7 @@ int SockWatcher::del_fd( int fd )
     if ( fd >= _maxfd )
         _maxfd_changed = true;
 
-	printf("SockWatcher::del_fd fd=%d, num=%d, size=%d\n", fd, _sock_num, _size);
+//	printf("SockWatcher::del_fd fd=%d, num=%d, size=%d\n", fd, _sock_num, _size);
     return 1;
 }
 

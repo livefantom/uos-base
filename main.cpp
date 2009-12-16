@@ -3,15 +3,24 @@
 #include <map>
 #include "connector.h"
 #include "pfauth.h"
+#include <SysTimeValue.h>
 
 
 int main()
 {
 
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGINT,  sigExit);
+    signal(SIGTERM, sigExit);
+
 	PfAuth* auth = PfAuth::singleton();
 	auth->initialize("./pfauth.ini");
 	Connector* conn = auth->createConn();
 	int i = 0;
+	uint64_t last_send = 0;
+	uint64_t now = 0;
+	int ret;
+	
 	while(1)
 	{
 		AuthMsg msg;
@@ -22,18 +31,25 @@ int main()
 		msg.state = 0;
 		msg.retcode = -1;
 		msg.adult = 0;
-		conn->sendRequest(msg, ++i);
-		printf("request sended: seq = %d\n", i);
+		
+		SysTimeValue::getTickCount(&now);
+		if ( now - last_send > 10 )
+		{
+			SysTimeValue::getTickCount(&last_send);
+			ret = conn->sendRequest(msg, ++i);
+			if (ret == 1)
+				printf("request sended: seq = %d\n", i);
+		}
 		
 		AuthMsg msg1;
 		uint32_t seq = 0;
-		int ret = conn->recvResponse(msg1, &seq);
+		ret = conn->recvResponse(msg1, &seq);
 		if (ret == 1)
 		{
-			printf("response recevied: seq = %d\n", seq);
+			printf("response recevied: seq=%d, retcode=%d, state=%d\n", seq, msg1.retcode, msg1.state);
 		}
+		usleep(10);
 
-		usleep(100*1000);
 	}// end of while.
 	auth->releaseConn(conn);
 	auth->release();
