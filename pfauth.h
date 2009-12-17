@@ -24,6 +24,7 @@ struct PfAuthCfg
     int     log_file_sz;
     
     int 	pool_size;
+    int		queue_max;
 
     ConnProp    conn_prop;
 };

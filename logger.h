@@ -12,6 +12,7 @@
 
 #define MAX_PREFIX  30
 #define DEFAULT_FILE_SZ 16*1024
+
 #ifndef MAX_PATH
 #   define MAX_PATH 510
 #endif
@@ -24,7 +25,7 @@ class Logger
 public:
     enum LOG_LEVEL
     {
-        LOF_FATAL = 1,
+        LOG_FATAL = 1,
         LOG_ERROR,
         LOG_WARN,
         LOG_INFO,
@@ -58,11 +59,10 @@ private:
     int     _file_sz;
     LOG_LEVEL   _level;
 
-    Mutex    _log_mtx;
+    Mutex   _log_mtx;
     int     _log_fd;
 
 };
-
 
 
 _UOS_END

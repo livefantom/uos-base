@@ -10,7 +10,11 @@
 
 struct AuthMsg
 {
-	AuthMsg():cmd_id(0),game_id(0),gateway_id(0),retcode(-1),adult(0),insert_time(0),state(0){}
+	AuthMsg() : gs_ip(0), gs_port(0), seq_id(0), cmd_id(0),
+		game_id(0), gateway_id(0), retcode(-1), adult(0), insert_time(0), state(0) {}
+	uint32_t	gs_ip;
+	uint32_t	gs_port;
+	uint32_t	seq_id;
 	uint32_t	cmd_id;
 	uint32_t	game_id;
 	uint32_t	gateway_id;
@@ -19,11 +23,11 @@ struct AuthMsg
 	std::string password;
 	std::string time;
 	std::string flag;
-	int32_t retcode;
-	int32_t adult;
-	// process control.
+	int32_t		retcode;
+	int32_t		adult;
+	// processing control.
 	uint64_t	insert_time;
-	int32_t	state;
+	int32_t		state;
 };
 
 typedef std::map<int, AuthMsg> MsgMap;
@@ -37,7 +41,7 @@ void ftxy4399_response_decode(std::string res, AuthMsg& msg);
 class Connector : public uos::Thread
 {
 public:
-    Connector(uint32_t size, const ConnProp& prop);
+    Connector(uint32_t size, uint32_t queue_max, const ConnProp& prop);
     ~Connector();
 
     int sendRequest(const AuthMsg& req_msg, uint32_t req_seq);
@@ -51,15 +55,15 @@ protected:
 
 private:
     Connection*	_conn;
+    ConnProp	_prop;
     uint32_t	_conn_size;
     uint32_t	_conn_cnt;
-
     SockWatcher	_watch;
 
     bool		_terminate;
 
-    ConnProp	_prop;
     MsgMap		_msg_map;
+    uint32_t	_queue_max;
     uos::Mutex	_mtx;
 };
 

@@ -36,13 +36,11 @@ int PfAuth::initialize(const char* conf_path)
         return E_ERROR;
     }
     conf.getStringVal("svr_name", _cfg.conn_prop.remote_host);
-//    conf.getStringVal("cmd_key", _cfg.conn_prop.cmd_key);
-//    conf.getStringVal("content_type", _cfg.conn_prop.content_type, "application/x-www-form-urlencoded");
     conf.getIntVal("svr_port", &_cfg.conn_prop.remote_port);
     conf.getStringVal("http_uri", _cfg.conn_prop.http_uri, "/");
     conf.getIntVal("rcv_timeout", &_cfg.conn_prop.timeout_secs, 5);
-//    conf.getIntVal("hb_interval", &_cfg.conn_prop.hb_interval, 15);
     conf.getIntVal("pool_size", &_cfg.pool_size, 10);
+    conf.getIntVal("queue_max", &_cfg.queue_max, 1000);
 
     conf.getStringVal("log_path", _cfg.log_path, "log");
     conf.getIntVal("log_level", &_cfg.log_level, 4);
@@ -86,7 +84,7 @@ Connector* PfAuth::createConn()
     PfAuthCfg& cfg = PfAuth::singleton()->_cfg;
     try
     {
-        conn = new Connector(cfg.pool_size, cfg.conn_prop);
+        conn = new Connector(cfg.pool_size, cfg.queue_max, cfg.conn_prop);
         _log.info("PfAuth::createConn| Create one new connector!\n");
     }
     catch (...)

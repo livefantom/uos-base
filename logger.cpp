@@ -20,11 +20,9 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#ifndef ASSERT
-#define ASSERT assert
-#endif
+
 #ifndef MAX_BUFFER_SIZE
-#define MAX_BUFFER_SIZE 1024
+#define MAX_BUFFER_SIZE 4096
 #endif
 
 
@@ -34,7 +32,8 @@ _UOS_BEGIN
 
 static char* strTime(char* buffer, int max_len)
 {
-    ASSERT(buffer != NULL);
+    if ( NULL == buffer )
+    	return NULL;
 
     time_t rawtime;
     struct tm* timeinfo;
@@ -121,12 +120,11 @@ static uint32_t gettid()
 
 int Logger::voutput(LOG_LEVEL level, const char* format, va_list ap)
 {
-    ASSERT(format != NULL);
+    if (NULL == format)
+    	return -1;
 
     if (_level < level)
-    {
         return 1;
-    }
 
     int retval = -1;
     int log_len = 0;
@@ -160,13 +158,12 @@ int Logger::voutput(LOG_LEVEL level, const char* format, va_list ap)
 
 int Logger::output(LOG_LEVEL level, const char* format, ...)
 {
-    ASSERT(format != NULL);
+    if (NULL == format)
+    	return output(LOG_FATAL, "%s", "log `format' string is NULL!\n");
 
-    int retval = -1;
     va_list arglist;
     va_start(arglist, format);
-
-    retval = voutput(level, format, arglist);
+    int retval = voutput(level, format, arglist);
     va_end(arglist);
 
     return retval;
@@ -174,18 +171,15 @@ int Logger::output(LOG_LEVEL level, const char* format, ...)
 
 int Logger::warning(const char* format, ...)
 {
-    ASSERT(format != NULL);
+    if (NULL == format)
+    	return output(LOG_FATAL, "%s", "log `format' string is NULL!\n");
 
     if (_level < LOG_WARN)
-    {
         return 1;
-    }
 
-    int retval = -1;
     va_list arglist;
     va_start(arglist, format);
-
-    retval = voutput(LOG_WARN, format, arglist);
+    int retval = voutput(LOG_WARN, format, arglist);
     va_end(arglist);
 
     return retval;
@@ -193,38 +187,32 @@ int Logger::warning(const char* format, ...)
 
 int Logger::info(const char* format, ...)
 {
-    ASSERT(format != NULL);
+    if (NULL == format)
+    	return output(LOG_FATAL, "%s", "log `format' string is NULL!\n");
 
     if (_level < LOG_INFO)
-    {
         return 1;
-    }
 
-    int retval = -1;
     va_list arglist;
     va_start(arglist, format);
 
-    retval = voutput(LOG_INFO, format, arglist);
+    int retval = voutput(LOG_INFO, format, arglist);
     va_end(arglist);
 
     return retval;
 }
 
-
 int Logger::debug(const char* format, ...)
 {
-    ASSERT(format != NULL);
+    if (NULL == format)
+    	return output(LOG_FATAL, "%s", "log `format' string is NULL!\n");
 
     if (_level < LOG_DEBUG)
-    {
         return 1;
-    }
 
-    int retval = -1;
     va_list arglist;
     va_start(arglist, format);
-
-    retval = voutput(LOG_DEBUG, format, arglist);
+    int retval = voutput(LOG_DEBUG, format, arglist);
     va_end(arglist);
 
     return retval;
@@ -237,10 +225,12 @@ int Logger::switch_file()
     time_t rawtime;
     bool need_switch = false;
 
+    _log_mtx.lock();
     if (_log_fd != -1)
     {
         // judge whether file should be switch.
         struct stat log_stat;
+        struct tm stm;
         if ( -1 == fstat(_log_fd, &log_stat) )
         {
             printf("Get file status error: %d: %s\n", errno, strerror(errno));
@@ -250,7 +240,9 @@ int Logger::switch_file()
         {
             // compare modification time.
             time(&rawtime);
-            if ( localtime(&log_stat.st_mtime)->tm_mday != localtime(&rawtime)->tm_mday )
+            int st_day = localtime_r(&log_stat.st_mtime, &stm)->tm_mday;
+            int day = localtime_r(&rawtime, &stm)->tm_mday;
+            if ( st_day != day )
             {
                 need_switch = true;
             }
@@ -262,7 +254,6 @@ int Logger::switch_file()
         }
     }
 
-    _log_mtx.lock();
     do
     {
         // close old file.
@@ -278,9 +269,9 @@ int Logger::switch_file()
             char time_buf[MAX_TIME_STR+1] = {0};
             strTime(time_buf, MAX_TIME_STR);
             time_buf[MAX_TIME_STR] = '\0';
-            if (strlen(_prefix) > 0)
+            if ( strlen(_prefix) > 0 )
             {
-                snprintf(file_path, MAX_PATH, "%s%s/%s.log", _prefix, _dir, time_buf);
+                snprintf(file_path, MAX_PATH, "%s/%s%s.log", _dir, _prefix, time_buf);
             }
             else
             {

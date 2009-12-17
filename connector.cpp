@@ -67,10 +67,11 @@ static uint64_t getmillisecs()
 }
 //////////////////////////////////////////////////////////////////////////
 
-Connector::Connector(uint32_t size, const ConnProp& prop)
+Connector::Connector(uint32_t size, uint32_t queue_max, const ConnProp& prop)
 : _prop(prop)
+, _conn_size(size)
+, _queue_max(queue_max)
 {
-    _conn_size = size;
     _conn_cnt = 0;
     uint32_t max = _watch.size_limit();
     _conn_size = (max <= size) ? max : size;
@@ -350,7 +351,7 @@ int Connector::sendRequest(const AuthMsg& req_msg, uint32_t sequence)
 	_mtx.lock();
 	int size = _msg_map.size();
 	//printf("Connector::sendRequest | map size:%d\n", );
-	if ( _msg_map.size() > 1024 )
+	if ( _msg_map.size() > _queue_max )
 	{
     	DEBUGLOG("Connector::sendRequest| Message queue is full, size=%d.\n", size);
     	retval = E_SYS_MSG_QUEUE_FULL; // -313
