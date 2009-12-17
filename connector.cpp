@@ -1,30 +1,25 @@
 #include "connector.h"
 #include <OperationCode.h>
-#include <time.h>
 #include "pfauth.h"
-#include <SysTimeValue.h>
-#include <iostream>
+#include <sys/time.h>
 #include <string>
 
-
-using namespace std;
-
-#define SEQ_INIT_VAL    0xFFFF
 
 #ifdef E_ERROR
 #   undef E_ERROR
 #   define E_ERROR      -1
 #endif
 
-#define INFOLOG PfAuth::singleton()->_log.info
-#define DEBUGLOG    PfAuth::singleton()->_log.debug
-#define CFGINFO PfAuth::singleton()->_cfg
+#define INFOLOG	(PfAuth::singleton()->logger()).info
+#define DEBUGLOG	(PfAuth::singleton()->logger()).debug
 
 
 //////////////////////////////////////////////////////////////////////////
 static char* trimLeft(char* buffer)
 {
-	ASSERT(buffer != NULL);
+	if (buffer == NULL)
+		return NULL;
+
 	char* pch = buffer;
 	for (int i = 0; i < strlen(pch); ++i)
 	{
@@ -41,7 +36,9 @@ static char* trimLeft(char* buffer)
 
 static char* trimRight(char* buffer)
 {
-	ASSERT(buffer != NULL);
+	if (buffer == NULL)
+		return NULL;
+
 	char* pch = buffer;
 	for (int i = (strlen(pch) - 1); i >= 0; --i)
 	{
@@ -56,22 +53,31 @@ static char* trimRight(char* buffer)
 
 static char* trim(char* buffer)
 {
-	ASSERT(buffer != NULL);
+	if (buffer == NULL)
+		return NULL;
+
 	return trimRight( trimLeft(buffer) );
 }
 
-
+static uint64_t getmillisecs()
+{
+    struct timeval tv;
+    (void) gettimeofday( &tv, (struct timezone*) 0 );
+    return (uint64_t)(tv.tv_sec) * 1000L + tv.tv_usec / 1000L;
+}
 //////////////////////////////////////////////////////////////////////////
 
 Connector::Connector(uint32_t size, const ConnProp& prop)
+: _prop(prop)
 {
     _conn_size = size;
+    _conn_cnt = 0;
     uint32_t max = _watch.size_limit();
     _conn_size = (max <= size) ? max : size;
     _conn = new Connection[_conn_size];
     for (uint32_t i=0; i< _conn_size; ++i)
     {
-    	_conn[i].setProp(prop);
+    	_conn[i].setProp(_prop);
     }
 
 	_terminate = false;
@@ -89,27 +95,30 @@ Connector::~Connector()
 
 void Connector::run()
 {
-    // reserved for auto increas.
-    _conn_cnt = _conn_size;
     int nready = 0;
-    // main loop
-    while ( (! _terminate) || (_conn_cnt > 0) )
+    uint64_t msecs = getmillisecs();
+    //while ( (! _terminate) || (_conn_cnt > 0) )
+    while ( ! _terminate )
     {
         nready = _watch.watch(0);
         if ( nready < 0 )
         {
             if (errno == EINTR || errno == EAGAIN )
                 continue;
-            printf("watch failed: %d: %s\n", errno, strerror(errno));
+            DEBUGLOG("Connector::run | watch failed: %d: %s\n", errno, strerror(errno));
             break;
         }
 
+		//msecs = getmillisecs();
         // if no connection is ready, just test timeout!
         int retcode = -1;
         if ( 0 == nready )
         {
-	        for (uint32_t i = 0; i < _conn_cnt; ++i)
+	        for (uint32_t i = 0; i < _conn_size; ++i)
 	        {
+	        	if ( _terminate )
+	        		break;
+
 	        	// if some connection is free, load task.
 	            if ( _conn[i].isFree() )
 	            {
@@ -119,6 +128,7 @@ void Connector::run()
 	                _conn[i].setState( Connection::S_CONNECTING );
 	                // select for reading and writing.
 	                _watch.add_fd( _conn[i].fileno() , FDW_RDWR );
+	                ++_conn_cnt;
 	            }
 	            else if ( _conn[i].isDone() && !_conn[i].isTimeout() )
 	            {
@@ -137,117 +147,131 @@ void Connector::run()
 	                    _watch.del_fd( _conn[i].fileno() );
                 	}
                     _conn[i].disconnect();
+	                --_conn_cnt;
                 }
-	        }
-	        continue;
+	            usleep(10);
+	        }// end of for.
         }
-
-        for (uint32_t i = 0; i < _conn_cnt; ++i)
+        else
         {
-            if ( _conn[i].isFree() )
-            {
-                retcode = _conn[i].do_connect();
-                if (retcode != S_SUCCESS)
-                    continue;
-                _conn[i].setState( Connection::S_CONNECTING );
-                // select for reading and writing.
-                _watch.add_fd( _conn[i].fileno() , FDW_RDWR );
-            }
-            else if ( _conn[i].isDone() && !_conn[i].isTimeout() )
-            {
-                // get one request.
-                retcode = getRequest( _conn[i]._wr_buf, &_conn[i]._wr_size, &_conn[i]._sequence );
-                if (retcode != S_SUCCESS)
-                    continue;
-                _conn[i].setState( Connection::S_WRITING );
-                _watch.add_fd( _conn[i].fileno(), FDW_WRITE );
-            }
-            else if ( _conn[i].isConnecting()
-                      && ( _watch.check_fd( _conn[i].fileno(), FDW_WRITE ) || _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
-                    )
-            {
-                // continue connect.
-                retcode = _conn[i].do_connect();
-                if (S_SUCCESS == retcode)
-                {
-	                _watch.del_fd( _conn[i].fileno() );
+	        for (uint32_t i = 0; i < _conn_size; ++i)
+	        {
+	        	if ( _terminate )
+	        		break;
+
+	            if ( _conn[i].isFree() )
+	            {
+	                retcode = _conn[i].do_connect();
+	                if (retcode != S_SUCCESS)
+	                    continue;
+	                _conn[i].setState( Connection::S_CONNECTING );
+	                _watch.add_fd( _conn[i].fileno() , FDW_RDWR );
+	                ++_conn_cnt;
+	            }
+	            else if ( _conn[i].isDone() && !_conn[i].isTimeout() )
+	            {
 	                // get one request.
 	                retcode = getRequest( _conn[i]._wr_buf, &_conn[i]._wr_size, &_conn[i]._sequence );
+	                if (retcode != S_SUCCESS)
+	                    continue;
+	                _conn[i].setState( Connection::S_WRITING );
+	                _watch.add_fd( _conn[i].fileno(), FDW_WRITE );
+	            }
+	            else if ( _conn[i].isConnecting()
+	                      && ( _watch.check_fd( _conn[i].fileno(), FDW_WRITE ) || _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
+	                    )
+	            {
+	                // continue connect.
+	                retcode = _conn[i].do_connect();
 	                if (S_SUCCESS == retcode)
 	                {
-		                _conn[i].setState( Connection::S_WRITING );
-		                _watch.add_fd( _conn[i].fileno(), FDW_WRITE );
+		                _watch.del_fd( _conn[i].fileno() );
+		                // get one request.
+		                retcode = getRequest( _conn[i]._wr_buf, &_conn[i]._wr_size, &_conn[i]._sequence );
+		                if (S_SUCCESS == retcode)
+		                {
+			                _conn[i].setState( Connection::S_WRITING );
+			                _watch.add_fd( _conn[i].fileno(), FDW_WRITE );
+		                }
+		                else
+		                	_conn[i].setState( Connection::S_DONE );
 	                }
 	                else
-	                	_conn[i].setState( Connection::S_DONE );
-                }
-                else
-                {
-	                _watch.del_fd( _conn[i].fileno() );
-                	_conn[i].disconnect();
-                }
-            }
-            else if ( _conn[i].isReading() && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
-            {
-                retcode = _conn[i].do_read();
-                if (S_SUCCESS == retcode)
-                {
-		            // set one response while read over.;
-	                setResponse( retcode, _conn[i]._rd_buf, _conn[i]._rd_idx, _conn[i]._sequence );
-	                // reset conn status
-	                _conn[i]._sequence = 0;
-	                _watch.del_fd( _conn[i].fileno() );
-	                // work over!!
-	                if ( _conn[i].isDone() )
 	                {
+		                _watch.del_fd( _conn[i].fileno() );
 	                	_conn[i].disconnect();
-	                }// else connection is Free status.
-                }
-                // else if connection closed with error.
-                else if ( retcode != E_SYS_NET_TIMEOUT )
-                {
-	                setResponse( E_SYS_NET_INVALID, 0, 0, _conn[i]._sequence );
-	                // reset conn status
-	                _conn[i]._sequence = 0;
-	                _watch.del_fd( _conn[i].fileno() );
-	                _conn[i].disconnect();
-                }
-                // else continue read.
-            }
-            else if ( _conn[i].isWriting() && _watch.check_fd( _conn[i].fileno(), FDW_WRITE ) )
-            {
-                retcode = _conn[i].do_write();
-                // if write over, prepare for reading response.
-                if (S_SUCCESS == retcode)
-                {
-	                _conn[i].setState( Connection::S_READING );
-	                _watch.del_fd( _conn[i].fileno() );
-	                _watch.add_fd( _conn[i].fileno(), FDW_READ );
+	                	--_conn_cnt;
+	                }
 	            }
-                // if socket is not invalid, remove it.
-	            else if (E_SYS_NET_INVALID == retcode)
+	            else if ( _conn[i].isReading() && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
+	            {
+	                retcode = _conn[i].do_read();
+	                if (S_SUCCESS == retcode)
+	                {
+			            // set one response while read over.
+		                setResponse( retcode, _conn[i]._rd_buf, _conn[i]._rd_idx, _conn[i]._sequence );
+		                _watch.del_fd( _conn[i].fileno() );
+		                // close socket while short-connection mode.
+		                if ( _conn[i].isDone() )
+		                {
+		                	_conn[i].disconnect();
+		                	--_conn_cnt;
+		                }
+	                }
+	                // else if connection closed with error.
+	                else if ( retcode != E_SYS_NET_TIMEOUT )
+	                {
+		                setResponse( E_SYS_NET_INVALID, 0, 0, _conn[i]._sequence );
+		                // reset conn status
+		                _watch.del_fd( _conn[i].fileno() );
+		                _conn[i].disconnect();
+	                	--_conn_cnt;
+	                }
+	                // else continue read.
+	            }
+	            else if ( _conn[i].isWriting() && _watch.check_fd( _conn[i].fileno(), FDW_WRITE ) )
+	            {
+	                retcode = _conn[i].do_write();
+	                // if write over, prepare for reading response.
+	                if (S_SUCCESS == retcode)
+	                {
+		                _conn[i].setState( Connection::S_READING );
+		                _watch.del_fd( _conn[i].fileno() );
+		                _watch.add_fd( _conn[i].fileno(), FDW_READ );
+		            }
+	                // if socket is not invalid, remove it.
+		            else if (E_SYS_NET_INVALID == retcode)
+	                {
+		                setResponse( E_SYS_NET_INVALID, 0, 0, _conn[i]._sequence );
+	                    _watch.del_fd( _conn[i].fileno() );
+	                    _conn[i].disconnect();
+	                	--_conn_cnt;
+	                }
+	                // else continue write.
+	            }
+	            else if ( _conn[i].isTimeout() )
                 {
-	                setResponse( E_SYS_NET_INVALID, 0, 0, _conn[i]._sequence );
-                    _watch.del_fd( _conn[i].fileno() );
+                	if ( !_conn[i].isDone() )
+                	{
+	                	DEBUGLOG("Connector::run | Socket `%d' with msg[%d] was timeout!\n", _conn[i].fileno(), _conn[i]._sequence);
+	                    // report timeout to GS.
+	                    setResponse( E_SYS_NET_TIMEOUT, 0, 0, _conn[i]._sequence );
+	                    _watch.del_fd( _conn[i].fileno() );
+                	}
                     _conn[i].disconnect();
+	                --_conn_cnt;
                 }
-                // else continue write.
-            }
-            else
-            {
-                if ( _conn[i].isTimeout() )
-                {
-                	printf("socket `%d' is timeout!\n", _conn[i].fileno());
-                    // response to GS.
-                    setResponse( E_SYS_NET_TIMEOUT, 0, 0, _conn[i]._sequence );
-                    _watch.del_fd( _conn[i].fileno() );
-                    _conn[i].disconnect();
-                }
-            }
-            //usleep(10);
-        }// end of for.
-        usleep(10);
-        printf("=========================================================================================\n");
+
+	            usleep(10);
+	        }// end of for.
+        }
+
+        usleep(100);
+        if ( getmillisecs() > msecs + 5000L )
+        {
+	        DEBUGLOG("Connector::run | STAT_INFO: nready=%d, conn_cnt=%d, map_size=%d\n", nready, _conn_cnt, _msg_map.size());
+	        msecs = getmillisecs();
+        }
     }
 }
 
@@ -261,7 +285,7 @@ int Connector::getRequest(char* buffer, uint32_t* nbytes, uint32_t* sequence)
         AuthMsg& msg = iter->second;
         if (msg.state == 0)
         {
-        	std::string req = ftxy4399_request_encode(msg, _prop.remote_host, _prop.remote_port, "/ftxy4399/userAuth");
+        	std::string req = ftxy4399_request_encode(msg, _prop.remote_host, _prop.remote_port, _prop.http_uri);
         	int len = req.length();
         	if ( *nbytes >= len )
             {
@@ -275,9 +299,9 @@ int Connector::getRequest(char* buffer, uint32_t* nbytes, uint32_t* sequence)
 	        }
 	        else
 	        {
-	        	printf("msg length is too big.\n");
+            	DEBUGLOG( "Connector::getRequest | String of request[%d] is too long!\n%s\n", iter->first, req.c_str() );
 	        	msg.state = 2;
-	            msg.retcode = -1; // TODO: msg invalid.
+	            msg.retcode = E_SYS_NET_NOT_ENOUGH_BUFFER;	// -309
 	        }
         }
 	    ++iter;
@@ -304,6 +328,17 @@ int Connector::setResponse(int retcode, const char* buffer, uint32_t nbytes, uin
         }
         msg.state = 2;
         retval = S_SUCCESS;
+        INFOLOG("PfAuth|%d|User_ID=%s|User_Name=%s|Password=%s|Time=%s|Flag=%s|Adult=%d|Sequence=%d|TC=%llu\n",
+        	msg.retcode,
+            msg.user_id.c_str(),
+            msg.user_name.c_str(),
+            msg.password.c_str(),
+            msg.time.c_str(),
+            msg.flag.c_str(),
+            msg.adult,
+            sequence,
+            getmillisecs() - msg.insert_time
+        );
 	}
 	_mtx.unlock();
 	return retval;
@@ -313,16 +348,18 @@ int Connector::sendRequest(const AuthMsg& req_msg, uint32_t sequence)
 {
 	int retval = -1;
 	_mtx.lock();
-	printf("Connector::sendRequest | map size:%d\n", _msg_map.size());
+	int size = _msg_map.size();
+	//printf("Connector::sendRequest | map size:%d\n", );
 	if ( _msg_map.size() > 1024 )
 	{
-    	printf("[no memory], sequence :%d\n", sequence);
+    	DEBUGLOG("Connector::sendRequest| Message queue is full, size=%d.\n", size);
+    	retval = E_SYS_MSG_QUEUE_FULL; // -313
 	}
 	else
 	{
 		std::pair<MsgIter, bool> ret_pair = _msg_map.insert( MsgPair(sequence, req_msg) );
 		AuthMsg& msg = ( ret_pair.first )->second;
-		msg.insert_time = time(0);
+		msg.insert_time = getmillisecs();
         retval = S_SUCCESS;
 	}
 	_mtx.unlock();
@@ -340,12 +377,22 @@ int Connector::recvResponse(AuthMsg& res_msg, uint32_t* sequence)
         //printf("----------msg_seq=%d, msg_state=%d, size=%d\n", iter->first, msg.state, _msg_map.size());
         if (0 == msg.state)
         {
-        	// TODO: check timeout.
-        	if ( time(0) > msg.insert_time + _prop.timeout_secs )
+        	if ( getmillisecs() > msg.insert_time + _prop.timeout_secs * 2000L )
         	{
         		msg.state = 2;
-        		msg.retcode = -302; // TODO: timeout!!!
-        	}
+        		msg.retcode = E_SYS_MSG_QUEUE_TIMEOUT;	// -314
+		        INFOLOG("PfAuth|%d|User_ID=%s|User_Name=%s|Password=%s|Time=%s|Flag=%s|Adult=%d|Sequence=%d|TC=%llu\n",
+		        	msg.retcode,
+		            msg.user_id.c_str(),
+		            msg.user_name.c_str(),
+		            msg.password.c_str(),
+		            msg.time.c_str(),
+		            msg.flag.c_str(),
+		            msg.adult,
+		            iter->first,
+		            getmillisecs() - msg.insert_time
+		        );
+	       	}
         	++iter;
         }
         else if (2 == msg.state)
@@ -369,8 +416,39 @@ int Connector::recvResponse(AuthMsg& res_msg, uint32_t* sequence)
 std::string ftxy4399_request_encode(const AuthMsg& msg, std::string host, int port, std::string uri)
 {
 	char buf[CONN_BUF_SZ] = {0};
-	std::string content = "user_id="+msg.user_id+"&user_name="+msg.user_name+"&time="+msg.time+"&flag="+msg.flag;
-    sprintf( buf, "POST %s HTTP/1.1\r\n" // /ftxy4399/userAuth
+	std::string content;
+	switch ( msg.game_id )
+	{
+		case 707:	// 4399.com
+			switch ( msg.cmd_id )
+			{
+				case 0x10003801:
+					content = "user_id="+msg.user_id+"&user_name="+msg.user_name+"&time="+msg.time+"&flag="+msg.flag;
+					break;
+				case 0x10003304:
+					content = "user_name="+msg.user_name+"&password="+msg.time+"&sign="+msg.flag;
+					break;
+				default:
+					break;
+			}
+			break;
+		case 709:	// 91wan.com
+			switch ( msg.cmd_id )
+			{
+				case 0x10003801:
+					content = "action=recheck&userName="+msg.user_name+"&time="+msg.time+"&sign="+msg.flag;
+					break;
+				case 0x10003304:
+					content = "userName="+msg.user_name+"&password="+msg.time+"&sign="+msg.flag;
+					break;
+				default:
+					break;
+			}
+			break;
+		default:
+			break;
+	}
+    sprintf( buf, "POST %s HTTP/1.1\r\n"
 		"Host: %s:%d\r\n"
 		"Pragma: no-cache\r\n"
 		"Accept: */*\r\n"
@@ -429,6 +507,10 @@ void ftxy4399_response_decode(std::string res, AuthMsg& msg)
             {
                 content += line;
             }
+            else
+            {
+            	length += atoi( line.c_str() );
+            }
             pos0 = pos1 + 2;
             ++i;
         }
@@ -444,11 +526,33 @@ void ftxy4399_response_decode(std::string res, AuthMsg& msg)
 	{
 		msg.retcode = atoi( (content.substr(0, pos1)).c_str() );
 		msg.adult = atoi( (content.substr(pos1+1)).c_str() );
+		switch (msg.retcode)
+		{
+			case 0:
+				msg.retcode = S_SUCCESS;
+				break;
+			case 1:
+				msg.retcode = E_ACCOUNT_NOT_FOUND;
+				break;
+			case 2:
+			case 3:
+			case 4:
+			case 5:
+				msg.retcode = E_JOINT_ACCOUNT_ERROR;
+				break;
+			default:
+				msg.retcode = E_JOINT_MSG_ERROR;
+				break;
+		}
 	}
 	else
 	{
-		msg.retcode = -1;
+		msg.retcode = E_JOINT_MSG_ERROR;
 		msg.adult = 0;
+	}
+	if (E_JOINT_MSG_ERROR == msg.retcode)
+	{
+    	INFOLOG( "ftxy4399_response_decode| Parsed content is following:\n%s\n", content.c_str() );
 	}
 }
 

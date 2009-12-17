@@ -4,7 +4,16 @@
 #include "connector.h"
 #include "pfauth.h"
 #include <SysTimeValue.h>
+#include <signal.h>
 
+
+int g_stop = false;
+
+void sigExit(int sig)
+{
+	printf("^C pressed, sig=%d!\n", sig);
+	g_stop = true;
+}
 
 int main()
 {
@@ -21,24 +30,24 @@ int main()
 	uint64_t now = 0;
 	int ret;
 	
-	while(1)
+	while( !g_stop )
 	{
 		AuthMsg msg;
 		msg.user_id = "31504325";
 		msg.user_name = "zhy770129";
 		msg.time = "1260247189";
 		msg.flag = "be6fe47bdda836b8cebb27e869e67f7c";
-		msg.state = 0;
-		msg.retcode = -1;
-		msg.adult = 0;
 		
 		SysTimeValue::getTickCount(&now);
 		if ( now - last_send > 10 )
 		{
 			SysTimeValue::getTickCount(&last_send);
-			ret = conn->sendRequest(msg, ++i);
+			ret = conn->sendRequest(msg, i);
 			if (ret == 1)
+			{
 				printf("request sended: seq = %d\n", i);
+				++i;
+			}
 		}
 		
 		AuthMsg msg1;

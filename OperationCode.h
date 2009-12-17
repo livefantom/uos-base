@@ -33,6 +33,9 @@
 #define E_SYS_NET_NOT_ENOUGH_BUFFER         -309
 #define E_SYS_NET_CLOSED                    -310
 #define E_SYS_NET_INVALID                   -311
+#define E_SYS_NET_OUT_OF_MAX_TIMES          -312
+#define E_SYS_MSG_QUEUE_FULL                -313
+#define E_SYS_MSG_QUEUE_TIMEOUT             -314
 #define E_SYS_LICENSE_ERROR                 -400
 #define E_SYS_LICENSE_OVERFLOW              -401
 #define E_SYS_LICENSE_EXPIRED               -402
@@ -41,6 +44,7 @@
 #define E_SYS_DATABASE_UIDPWD_ERROR         -502
 #define E_SYS_DATABASE_TIMEOUT              -503
 #define E_SYS_DATABASE_NO_CONNECTION        -504
+#define E_SYS_DATABASE_DATA_INVALID         -505
 #define E_SYS_CONFIG_ERROR                  -600
 #define E_SYS_CONFIG_NO_ITEM                -601
 #define E_SYS_FILE_NOT_FOUND                -700
@@ -62,6 +66,7 @@
 #define E_ZONE_ERROR                        -1100
 #define E_ZONE_NOT_FOUND                    -1101
 #define E_ZONE_STATE_ERROR                  -1110
+#define E_GAME_ID_ERROR                     -1120
 #define E_ACCOUNT_ERROR                     -1200
 #define E_ACCOUNT_NOT_FOUND                 -1201
 #define E_ACCOUNT_INVALID                   -1202
@@ -84,6 +89,8 @@
 #define E_USER_STATE_EXPIRED                -1412
 #define E_USER_STATE_NOT_ACTIVATED          -1413
 #define E_USER_TYPE_ERROR                   -1420
+#define E_USER_MATRIX_PASSWD_REQUIRED       -1421
+#define E_USER_DYNAMIC_PSW_REQUIRED         -1422
 #define E_USER_IN_OTHER_GATEWAY             -1430
 #define E_USER_BALANCE_ERROR                -1440
 #define E_USER_BALANCE_NOT_ENOUGH           -1441
@@ -100,12 +107,35 @@
 #define E_USER_IB_ITEM_NOT_ENOUGH           -1457
 #define E_USER_IB_ITEM_USED                 -1458
 #define E_USER_IB_ITEM_EXPIRED              -1459
+#define E_PAY_DUPLICATE                     -1460
 #define E_USER_CHARGE_ERROR                 -1470
 #define E_USER_CHARGE_STATE_ERROR           -1471
+#define E_CHARGE_DUPLICATE                  -1472
+#define E_DETAIL_ID_NOT_FOUND               -1473
+#define E_AUDIT_ERROR                       -1474
 #define E_USER_SERIALNO_ERROR               -1480
 #define E_USER_SERIALNO_NOT_FOUND           -1481
 #define E_USER_SERIALNO_USED                -1482
 #define E_USER_SERIALNO_EXPIRED             -1483
 #define E_USER_SERIALNO_EXISTED             -1484
+#define E_USER_ERROR_CHCAGE_DETAIL_ID	    -1490
+#define E_CHARGE_AMOUNT_ERROR               -1516
+
+#define E_USER_NO_PASSCARD_BIND             -1534
+
+#define E_SN_NOT_MATCH                      -1535
+#define E_SN_NOT_EXIST                      -1536
+#define E_DYNAMIC_PWD_ERROR                 -1537
+#define E_USER_DYNAMIC_PWD_ERROR			-1537
+#define E_DCODE_ALREADY_BIND                -1538
+#define E_USER_NO_DYNAMIC_PSW_BIND          -1539
+
+#define E_JOINT_MSG_ERROR                   -1811
+#define E_JOINT_ACCOUNT_ERROR               -1812
+#define E_JOINT_SIGN_ERROR                  -1813
+
+#define E_GROUP_NOT_EXIST                   -1900
+#define E_GROUP_EXIST                       -1901
+#define E_GROUP_DUPLICATE                   -1902
 
 #endif

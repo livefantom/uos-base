@@ -37,6 +37,8 @@ public:
     int release();
     Connector* createConn();
     void releaseConn(Connector* conn);
+	uos::Logger& logger() { return _log; }
+
 private:
     PfAuth(){};
     ~PfAuth(){};

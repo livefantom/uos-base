@@ -1,7 +1,6 @@
 #include "connector.h"
 #include <OperationCode.h>
-#include <time.h>
-#include <iostream>
+#include "pfauth.h"
 #include <string>
 
 
@@ -9,6 +8,9 @@
 #   undef E_ERROR
 #   define E_ERROR      -1
 #endif
+
+#define INFOLOG	(PfAuth::singleton()->logger()).info
+#define DEBUGLOG	(PfAuth::singleton()->logger()).debug
 
 
 Connection::Connection(const ConnProp& prop)
@@ -97,7 +99,7 @@ int Connection::do_connect()
         int n = sizeof(error);
         if ( Socket::getsockopt(SOL_SOCKET, SO_ERROR, &error, &n) < 0 || error != 0 )
         {
-            printf("nonblocking connect failed: %d: %s\n", error, strerror(error));
+            DEBUGLOG("Connection::do_connect | Connect to %s:%d failed: %d: %s\n", _prop.remote_host, _prop.remote_port, error, strerror(error));
             retval = E_SYS_NET_INVALID;
         }
         else
@@ -143,7 +145,7 @@ int Connection::do_read()
     }
     else
     {
-        printf("Connection::do_read| Detected connection error:%d\n", retcode);
+        DEBUGLOG("Connection::do_read | Detected connection error:%d\n", retcode);
         retval = E_SYS_NET_INVALID;
     }
 
@@ -153,7 +155,7 @@ int Connection::do_read()
 
 int Connection::do_write()
 {
-	printf("Connection::do_write | fd=%d, wr_size=%d\n", fileno(), _wr_size);
+	//printf("Connection::do_write | fd=%d, wr_size=%d\n", fileno(), _wr_size);
     int retcode = E_ERROR;
     int retval  = E_ERROR;
 
@@ -165,16 +167,16 @@ int Connection::do_write()
     {
     	retval = S_SUCCESS;
     }
-    else if ( E_SYS_NET_TIMEOUT == retcode ) // unreasonable error!!!
+    else if (retcode < 0 && retcode != E_SYS_NET_TIMEOUT)
     {
-    	retval = E_SYS_NET_TIMEOUT;
-    }
-    else if (retval < 0 && retval != E_SYS_NET_TIMEOUT)
-    {
-        printf("Connection::do_write| Detected connection error:%d\n", retval);
+        DEBUGLOG("Connection::do_write | Detected connection error:%d\n", retcode);
         retval = E_SYS_NET_INVALID;
     }
     // else, partly sended, wait for send again.
+    else
+    {
+    	retval = E_SYS_NET_TIMEOUT;
+    }
 
     return retval;
 }

@@ -10,15 +10,20 @@
 
 struct AuthMsg
 {
+	AuthMsg():cmd_id(0),game_id(0),gateway_id(0),retcode(-1),adult(0),insert_time(0),state(0){}
+	uint32_t	cmd_id;
+	uint32_t	game_id;
+	uint32_t	gateway_id;
 	std::string user_id;
 	std::string user_name;
+	std::string password;
 	std::string time;
 	std::string flag;
-	int retcode;
-	int adult;
+	int32_t retcode;
+	int32_t adult;
 	// process control.
-	time_t insert_time;
-	int state;
+	uint64_t	insert_time;
+	int32_t	state;
 };
 
 typedef std::map<int, AuthMsg> MsgMap;

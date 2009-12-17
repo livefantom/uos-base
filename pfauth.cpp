@@ -39,6 +39,7 @@ int PfAuth::initialize(const char* conf_path)
 //    conf.getStringVal("cmd_key", _cfg.conn_prop.cmd_key);
 //    conf.getStringVal("content_type", _cfg.conn_prop.content_type, "application/x-www-form-urlencoded");
     conf.getIntVal("svr_port", &_cfg.conn_prop.remote_port);
+    conf.getStringVal("http_uri", _cfg.conn_prop.http_uri, "/");
     conf.getIntVal("rcv_timeout", &_cfg.conn_prop.timeout_secs, 5);
 //    conf.getIntVal("hb_interval", &_cfg.conn_prop.hb_interval, 15);
     conf.getIntVal("pool_size", &_cfg.pool_size, 10);

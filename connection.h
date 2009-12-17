@@ -11,6 +11,7 @@ struct ConnProp
 {
     char remote_host[MAX_PATH];
     int32_t	remote_port;
+    char http_uri[MAX_PATH];
     int32_t	timeout_secs;
 };
 
