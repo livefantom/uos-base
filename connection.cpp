@@ -121,9 +121,16 @@ int Connection::do_read()
     {
     	_rd_idx += retcode;
 		// recevied some msg, try to parse.
-        printf("recevied some msg, try to parse.\n");
-    	// TODO: parse_msg();
-    	retval = E_SYS_NET_TIMEOUT;
+    	retcode = try_parse_http_response(_rd_buf);
+    	if (true == retcode)
+    	{
+	        retval = S_SUCCESS;
+    	}
+    	else
+    	{
+	        printf("partly msg recevied, wait for next!\n");
+	    	retval = E_SYS_NET_TIMEOUT;
+    	}
     }
     // remote closed, maybe whole msg received.
     else if ( 0 == retcode )
@@ -165,6 +172,7 @@ int Connection::do_write()
     // send over.
     if ( _wr_idx >= _wr_size )
     {
+    	DEBUGLOG( "Connection::do_write | The following request sended:\n%s\n", _wr_buf );
     	retval = S_SUCCESS;
     }
     else if (retcode < 0 && retcode != E_SYS_NET_TIMEOUT)

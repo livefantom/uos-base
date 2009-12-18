@@ -16,6 +16,7 @@
 #   include <unistd.h>
 #   include <pthread.h>
 #endif
+#include <sys/time.h>
 #include <time.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -26,7 +27,7 @@
 #endif
 
 
-#define MAX_TIME_STR    20
+#define MAX_TIME_STR    32
 
 _UOS_BEGIN
 
@@ -130,7 +131,25 @@ int Logger::voutput(LOG_LEVEL level, const char* format, va_list ap)
     int log_len = 0;
     char buffer[MAX_BUFFER_SIZE+1] = {0};
     char time_buf[MAX_TIME_STR+1] = {0};
-    strTime(time_buf, MAX_TIME_STR);
+    struct timeval tv;
+    struct tm* timeptr = NULL;
+    time_t seconds = 0;
+    uint64_t mseconds = 0;
+
+    gettimeofday(&tv, NULL);
+    seconds = tv.tv_sec;
+    mseconds = tv.tv_usec / 1000;
+    timeptr = localtime(&seconds);
+
+    snprintf(time_buf, sizeof(time_buf), "%d-%02d-%02d_%02d:%02d:%02d.%03lld",
+        1900 + timeptr->tm_year,
+        timeptr->tm_mon+1,
+        timeptr->tm_mday,
+        timeptr->tm_hour,
+        timeptr->tm_min,
+        timeptr->tm_sec,
+        mseconds);
+
     time_buf[MAX_TIME_STR] = '\0';
     sprintf(buffer, "%s|%c|%u|%08X|", time_buf, 'U',  getpid(), gettid());
     retval = vsnprintf(buffer+strlen(buffer), MAX_BUFFER_SIZE, format, ap);

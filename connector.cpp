@@ -424,10 +424,10 @@ std::string ftxy4399_request_encode(const AuthMsg& msg, std::string host, int po
 			switch ( msg.cmd_id )
 			{
 				case 0x10003801:
-					content = "user_id="+msg.user_id+"&user_name="+msg.user_name+"&time="+msg.time+"&flag="+msg.flag;
+					content = "userid="+msg.user_id+"&username="+msg.user_name+"&time="+msg.time+"&flag="+msg.flag;
 					break;
 				case 0x10003304:
-					content = "user_name="+msg.user_name+"&password="+msg.time+"&sign="+msg.flag;
+					content = "userName="+msg.user_name+"&password="+msg.time+"&sign="+msg.flag;
 					break;
 				default:
 					break;
@@ -447,6 +447,7 @@ std::string ftxy4399_request_encode(const AuthMsg& msg, std::string host, int po
 			}
 			break;
 		default:
+			DEBUGLOG("ftxy4399_request_encode | GameID `%d' is not support!\n", msg.game_id);
 			break;
 	}
     sprintf( buf, "POST %s HTTP/1.1\r\n"
@@ -459,6 +460,74 @@ std::string ftxy4399_request_encode(const AuthMsg& msg, std::string host, int po
 		"\r\n%s\r\n", uri.c_str(), host.c_str(), port, content.length(), content.c_str() );
 	return buf;
 }
+
+bool try_parse_http_response(std::string res)
+{
+    int pos0 = 0;
+    int pos1 = 0;
+    int pos2 = 0;
+    std::string header;
+    std::string content;
+    std::string body;
+    std::string line;
+    char len[32] = {0};
+    int content_length = 0;
+    bool bchunked = false;
+    if  (  ( pos1 = res.find("\r\n\r\n") ) != -1 )
+    {
+        header = res.substr(pos0, pos1 - pos0);
+        body = res.substr(pos1 + 4);
+    }
+    while( ( pos1 = header.find("\r\n", pos0) ) != -1 )
+    {
+        line = header.substr(pos0, pos1 - pos0);
+        if ( ( pos2 = line.find("Transfer-Encoding:") ) != -1 )
+        {
+            if ( line.find("chunked", pos2) != -1 )
+            {
+                bchunked = true;
+                break;
+            }
+        }
+        else if ( ( pos2 = line.find("Content-Length:") ) != -1 )
+        {
+            strncpy(len, ( line.substr(pos2+15) ).c_str(), 32);
+            content_length = atoi( trim(len) );
+            break;
+        }
+        pos0 = pos1 + 2;
+    }
+    // parse body.
+    if (bchunked)
+    {
+        int i = 0;
+        pos0 = 0;
+        while( ( pos1 = body.find("\r\n", pos0) ) != -1 )
+        {
+            line = body.substr(pos0, pos1 - pos0);
+            if (i%2 != 0)
+            {
+                content += line;
+            }
+            else
+            {
+            	content_length += atoi( line.c_str() );
+            }
+            pos0 = pos1 + 2;
+            ++i;
+        }
+    }
+    else
+    {
+        content = body;
+    }
+    if ( content.length() == content_length )
+    	return true;
+    else
+    	return false;
+	
+}
+	
 
 void ftxy4399_response_decode(std::string res, AuthMsg& msg)
 {
@@ -523,10 +592,18 @@ void ftxy4399_response_decode(std::string res, AuthMsg& msg)
     // parse content.
     printf(">>>>>>>>>>>>>>>>>>>>>> %s\n", content.c_str());
     
-	if ( ( pos1 = content.find("|") ) != -1 )
-	{
-		msg.retcode = atoi( (content.substr(0, pos1)).c_str() );
-		msg.adult = atoi( (content.substr(pos1+1)).c_str() );
+    if ( content.length() > 0 )
+    {
+		if ( ( pos1 = content.find("|") ) != -1 )
+		{
+			msg.retcode = atoi( ( content.substr(0, pos1) ).c_str() );
+			msg.adult = atoi( ( content.substr(pos1+1) ).c_str() );
+		}
+		else
+		{
+			msg.retcode = atoi( content.c_str() );
+			msg.adult = 0;
+		}
 		switch (msg.retcode)
 		{
 			case 0:
