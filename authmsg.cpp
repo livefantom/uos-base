@@ -2,7 +2,6 @@
 #include "OperationCode.h"
 #include "pfauth.h"
 #include <sys/time.h>
-#include <string>
 #include <cstdlib>
 
 
@@ -30,6 +29,7 @@ std::string AuthMsg::encodeRequest() const
             req = "userName="+user_name+"&password="+time+"&sign="+flag;
             break;
         default:
+ 	        DEBUGLOG("AuthMsg::encodeRequest | CommandID `%d' is not support!\n", cmd_id);
             break;
         }
         break;
@@ -43,11 +43,12 @@ std::string AuthMsg::encodeRequest() const
             req = "userName="+user_name+"&password="+time+"&sign="+flag;
             break;
         default:
+ 	        DEBUGLOG("AuthMsg::encodeRequest | CommandID `%d' is not support!\n", cmd_id);
             break;
         }
         break;
     default:
-        DEBUGLOG("ftxy4399_request_encode | GameID `%d' is not support!\n", game_id);
+        DEBUGLOG("AuthMsg::encodeRequest | GameID `%d' is not support!\n", game_id);
         break;
     }
     return req;
@@ -95,7 +96,7 @@ const AuthMsg& AuthMsg::decodeResponse(std::string res)
     }
     if (E_JOINT_MSG_ERROR == retcode)
     {
-        INFOLOG( "ftxy4399_response_decode| Parsed content is following:\n%s\n", res.c_str() );
+        INFOLOG( "AuthMsg::decodeResponse | Parsed content is following:\n%s\n", res.c_str() );
     }
     return *this;
 }

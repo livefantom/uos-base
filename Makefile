@@ -2,8 +2,8 @@
 
 CC       = gcc
 CXX      = g++
-CFLAGS   = -pipe -Wall -W -O2 -march=i686 -mtune=i686 -g -DGLX_GLXEXT_LEGACY -fno-use-cxa-atexit -fexceptions -DLINUX
-CXXFLAGS = -pipe -Wall -W -O2 -march=i686 -mtune=i686 -g -DGLX_GLXEXT_LEGACY -fno-use-cxa-atexit -fexceptions -DLINUX
+CFLAGS   = -pipe -Wall -W -march=i686 -mtune=i686 -g -DGLX_GLXEXT_LEGACY -fno-use-cxa-atexit -fexceptions -DLINUX
+CXXFLAGS = -pipe -Wall -W -march=i686 -mtune=i686 -g -DGLX_GLXEXT_LEGACY -fno-use-cxa-atexit -fexceptions -DLINUX
 INCPATH  = -I. -I$(ESUITE_HOME)/includes
 LINK     = g++
 LFLAGS   =

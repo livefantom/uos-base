@@ -15,8 +15,8 @@ typedef std::pair<int, AuthMsg> MsgPair;
 typedef MsgMap::iterator MsgIter;
 
 bool try_parse_http_response(std::string res);
-std::string ftxy4399_request_encode(const AuthMsg& msg, std::string host, int port, std::string uri);
-void ftxy4399_response_decode(std::string res, AuthMsg& msg);
+std::string http_request_encode(const AuthMsg& msg, const ConnProp& prop);
+void http_response_decode(std::string res, AuthMsg& msg);
 
 
 class Connector : public uos::Thread

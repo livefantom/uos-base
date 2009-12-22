@@ -36,9 +36,11 @@ int main()
 		msg.user_name = "zhy770129";
 		msg.time = "1260247189";
 		msg.flag = "be6fe47bdda836b8cebb27e869e67f7c";
+		msg.game_id = 707;
+		msg.cmd_id = 0x10003801;
 
 		SysTimeValue::getTickCount(&now);
-		if ( now - last_send > 10 )
+		if ( now - last_send > 100 )
 		{
 			SysTimeValue::getTickCount(&last_send);
 			ret = conn->sendRequest(msg, i);

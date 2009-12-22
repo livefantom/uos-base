@@ -9,10 +9,11 @@
 
 struct ConnProp
 {
-    char remote_host[MAX_PATH];
+    char	remote_host[MAX_PATH];
     int32_t	remote_port;
-    char http_uri[MAX_PATH];
+    char	http_uri[MAX_PATH];
     int32_t	timeout_secs;
+    bool	keep_alive;
 };
 
 

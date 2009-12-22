@@ -39,6 +39,8 @@ int PfAuth::initialize(const char* conf_path)
     conf.getIntVal("svr_port", &_cfg.conn_prop.remote_port);
     conf.getStringVal("http_uri", _cfg.conn_prop.http_uri, "/");
     conf.getIntVal("rcv_timeout", &_cfg.conn_prop.timeout_secs, 5);
+    conf.getIntVal("keep_alive", (int*)&_cfg.conn_prop.keep_alive, 0);
+    
     conf.getIntVal("pool_size", &_cfg.pool_size, 10);
     conf.getIntVal("queue_max", &_cfg.queue_max, 1000);
 

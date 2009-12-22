@@ -213,16 +213,27 @@ void Connector::run()
                         // set one response while read over.
                         setResponse( retcode, _conn[i]._rd_buf, _conn[i]._rd_idx, _conn[i]._sequence );
                         _watch.del_fd( _conn[i].fileno() );
+                        {	// ugly codes.
+							_conn[i]._rd_idx = 0;
+							_conn[i]._wr_idx = 0;
+							_conn[i]._rd_size = CONN_BUF_SZ;
+							_conn[i]._wr_size = CONN_BUF_SZ;
+							bzero(_conn[i]._rd_buf, CONN_BUF_SZ);
+							bzero(_conn[i]._wr_buf, CONN_BUF_SZ);
+                        }
                         // close socket while short-connection mode.
-                        if ( _conn[i].isDone() )
+                        if ( _conn[i].isDone() )// TODO: 
                         {
                             _conn[i].disconnect();
                             --_conn_cnt;
                         }
+                        else
+                            _conn[i].setState( Connection::S_DONE );
                     }
                     // else if connection closed with error.
                     else if ( retcode != E_SYS_NET_TIMEOUT )
                     {
+                    	// TODO: msg resend optmize.
                         setResponse( E_SYS_NET_INVALID, 0, 0, _conn[i]._sequence );
                         // reset conn status
                         _watch.del_fd( _conn[i].fileno() );
@@ -260,7 +271,7 @@ void Connector::run()
                         setResponse( E_SYS_NET_TIMEOUT, 0, 0, _conn[i]._sequence );
                         _watch.del_fd( _conn[i].fileno() );
                     }
-                    _conn[i].disconnect();
+                    _conn[i].disconnect();	// TODO: deal with keep-alive state.
                     --_conn_cnt;
                 }
 
@@ -287,7 +298,7 @@ int Connector::getRequest(char* buffer, uint32_t* nbytes, uint32_t* sequence)
         AuthMsg& msg = iter->second;
         if (msg.state == 0)
         {
-            std::string req = ftxy4399_request_encode(msg, _prop.remote_host, _prop.remote_port, _prop.http_uri);
+            std::string req = http_request_encode(msg, _prop);
             int len = req.length();
             if ( *nbytes >= len )
             {
@@ -322,7 +333,7 @@ int Connector::setResponse(int retcode, const char* buffer, uint32_t nbytes, uin
         AuthMsg& msg = iter->second;
         if (S_SUCCESS == retcode)
         {
-            ftxy4399_response_decode(buffer, msg);
+            http_response_decode(buffer, msg);
         }
         else
         {
@@ -415,50 +426,26 @@ int Connector::recvResponse(AuthMsg& res_msg, uint32_t* sequence)
 }
 
 
-std::string ftxy4399_request_encode(const AuthMsg& msg, std::string host, int port, std::string uri)
+std::string http_request_encode(const AuthMsg& msg, const ConnProp& prop)
 {
     char buf[CONN_BUF_SZ] = {0};
-    std::string content;
-    switch ( msg.game_id )
-    {
-    case 707:	// 4399.com
-        switch ( msg.cmd_id )
-        {
-        case 0x10003801:
-            content = "userid="+msg.user_id+"&username="+msg.user_name+"&time="+msg.time+"&flag="+msg.flag;
-            break;
-        case 0x10003304:
-            content = "userName="+msg.user_name+"&password="+msg.time+"&sign="+msg.flag;
-            break;
-        default:
-            break;
-        }
-        break;
-    case 709:	// 91wan.com
-        switch ( msg.cmd_id )
-        {
-        case 0x10003801:
-            content = "action=recheck&userName="+msg.user_name+"&time="+msg.time+"&sign="+msg.flag;
-            break;
-        case 0x10003304:
-            content = "userName="+msg.user_name+"&password="+msg.time+"&sign="+msg.flag;
-            break;
-        default:
-            break;
-        }
-        break;
-    default:
-        DEBUGLOG("ftxy4399_request_encode | GameID `%d' is not support!\n", msg.game_id);
-        break;
-    }
+    std::string content = msg.encodeRequest();
+    std::string connection = (prop.keep_alive) ? "Keep-Alive" : "Close";
+
     sprintf( buf, "POST %s HTTP/1.1\r\n"
              "Host: %s:%d\r\n"
              "Pragma: no-cache\r\n"
              "Accept: */*\r\n"
-             "Connection: Close\r\n"
+             "Connection: %s\r\n"
              "Content-Length: %d\r\n"
              "Content-Type: application/x-www-form-urlencoded\r\n"
-             "\r\n%s\r\n", uri.c_str(), host.c_str(), port, content.length(), content.c_str() );
+             "\r\n%s\r\n",
+     		 prop.http_uri,
+    		 prop.remote_host, prop.remote_port,
+    		 connection.c_str(),
+    		 content.length(),
+    		 content.c_str()
+    );
     return buf;
 }
 
@@ -530,7 +517,7 @@ bool try_parse_http_response(std::string res)
 }
 
 
-void ftxy4399_response_decode(std::string res, AuthMsg& msg)
+void http_response_decode(std::string res, AuthMsg& msg)
 {
     int pos0 = 0;
     int pos1 = 0;
@@ -593,46 +580,7 @@ void ftxy4399_response_decode(std::string res, AuthMsg& msg)
     // parse content.
     printf(">>>>>>>>>>>>>>>>>>>>>> %s\n", content.c_str());
 
-    if ( content.length() > 0 )
-    {
-        if ( ( pos1 = content.find("|") ) != -1 )
-        {
-            msg.retcode = atoi( ( content.substr(0, pos1) ).c_str() );
-            msg.adult = atoi( ( content.substr(pos1+1) ).c_str() );
-        }
-        else
-        {
-            msg.retcode = atoi( content.c_str() );
-            msg.adult = 0;
-        }
-        switch (msg.retcode)
-        {
-        case 0:
-            msg.retcode = S_SUCCESS;
-            break;
-        case 1:
-            msg.retcode = E_ACCOUNT_NOT_FOUND;
-            break;
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-            msg.retcode = E_JOINT_ACCOUNT_ERROR;
-            break;
-        default:
-            msg.retcode = E_JOINT_MSG_ERROR;
-            break;
-        }
-    }
-    else
-    {
-        msg.retcode = E_JOINT_MSG_ERROR;
-        msg.adult = 0;
-    }
-    if (E_JOINT_MSG_ERROR == msg.retcode)
-    {
-        INFOLOG( "ftxy4399_response_decode| Parsed content is following:\n%s\n", content.c_str() );
-    }
+    msg.decodeResponse(content);
 }
 
 
