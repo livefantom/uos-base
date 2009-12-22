@@ -30,6 +30,8 @@
 			<Add option="-fexceptions" />
 		</Compiler>
 		<Unit filename="OperationCode.h" />
+		<Unit filename="connection.cpp" />
+		<Unit filename="connection.h" />
 		<Unit filename="connector.cpp" />
 		<Unit filename="connector.h" />
 		<Unit filename="logger.cpp" />

@@ -1,10 +1,9 @@
 #include "thread.h"
-#include <cstdio>
-#include <map>
 #include "connector.h"
 #include "pfauth.h"
 #include <SysTimeValue.h>
 #include <signal.h>
+#include <cstdio>
 
 
 int g_stop = false;
@@ -29,7 +28,7 @@ int main()
 	uint64_t last_send = 0;
 	uint64_t now = 0;
 	int ret;
-	
+
 	while( !g_stop )
 	{
 		AuthMsg msg;
@@ -37,7 +36,7 @@ int main()
 		msg.user_name = "zhy770129";
 		msg.time = "1260247189";
 		msg.flag = "be6fe47bdda836b8cebb27e869e67f7c";
-		
+
 		SysTimeValue::getTickCount(&now);
 		if ( now - last_send > 10 )
 		{
@@ -49,7 +48,7 @@ int main()
 				++i;
 			}
 		}
-		
+
 		AuthMsg msg1;
 		uint32_t seq = 0;
 		ret = conn->recvResponse(msg1, &seq);

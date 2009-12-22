@@ -37,6 +37,7 @@ SOURCES = pfauth.cpp \
 		  sockwatcher.cpp \
 		  connection.cpp \
 		  connector.cpp \
+		  authmsg.cpp \
 		  main.cpp
 OBJECTS = pfauth.o \
 		  socket.o \
@@ -46,6 +47,7 @@ OBJECTS = pfauth.o \
 		  sockwatcher.o \
 		  connection.o \
 		  connector.o \
+		  authmsg.o \
 		  main.o
 
 DESTDIR  = 

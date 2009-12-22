@@ -22,7 +22,7 @@ struct PfAuthCfg
     char    log_path[MAX_PATH];
     int     log_level;
     int     log_file_sz;
-    
+
     int 	pool_size;
     int		queue_max;
 
@@ -38,7 +38,10 @@ public:
     int release();
     Connector* createConn();
     void releaseConn(Connector* conn);
-	uos::Logger& logger() { return _log; }
+    uos::Logger& logger()
+    {
+        return _log;
+    }
 
 private:
     PfAuth(){};

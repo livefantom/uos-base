@@ -1,0 +1,1 @@
+export ESUITE_HOME=$PWD

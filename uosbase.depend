@@ -72,19 +72,20 @@
 	<errno.h>
 	"thread.h"
 
-1260709888 source:/home/ben/dev/base/connector.cpp
+1261409416 source:/home/ben/dev/base/connector.cpp
 	"connector.h"
-	<OperationCode.h>
-	<time.h>
+	"OperationCode.h"
 	"pfauth.h"
-	<SysTimeValue.h>
-	<iostream>
+	<sys/time.h>
 	<string>
+	<cstdlib>
 
-1260706388 /home/ben/dev/base/connector.h
+1261408510 /home/ben/dev/base/connector.h
 	"thread.h"
-	"socket.h"
+	"mutex.h"
 	"sockwatcher.h"
+	"connection.h"
+	<map>
 
 1260548211 /home/ben/dev/base/thread.h
 	"uosdef.h"
@@ -99,26 +100,26 @@
 	<stdarg.h>
 	<netinet/in.h>
 
-1260706388 /home/ben/dev/base/socket.h
+1261142626 /home/ben/dev/base/socket.h
 	"uosdef.h"
 	<WinSock2.h>
 	<sys/socket.h>
 	<arpa/inet.h>
 	<string>
 
-1260706388 /home/ben/dev/base/sockwatcher.h
+1261142626 /home/ben/dev/base/sockwatcher.h
 	"uosdef.h"
 	<sys/select.h>
 
 1259817753 /home/ben/dev/base/includes/OperationCode.h
 
-1260706388 /home/ben/dev/base/pfauth.h
+1261142626 /home/ben/dev/base/pfauth.h
 	"socket.h"
 	"logger.h"
 	"mutex.h"
 	"connector.h"
 
-1260548211 /home/ben/dev/base/logger.h
+1261142626 /home/ben/dev/base/logger.h
 	"uosdef.h"
 	"mutex.h"
 
@@ -152,7 +153,7 @@
 	<pthread.h>
 	<fcntl.h>
 
-1260548211 source:/home/ben/dev/base/logger.cpp
+1261142626 source:/home/ben/dev/base/logger.cpp
 	"logger.h"
 	<Windows.h>
 	<io.h>
@@ -160,14 +161,18 @@
 	<process.h>
 	<unistd.h>
 	<pthread.h>
+	<sys/time.h>
 	<time.h>
 	<fcntl.h>
 	<sys/stat.h>
 
-1260706388 source:/home/ben/dev/base/main.cpp
+1261409454 source:/home/ben/dev/base/main.cpp
 	"thread.h"
+	"connector.h"
+	"pfauth.h"
+	<SysTimeValue.h>
+	<signal.h>
 	<cstdio>
-	<map>
 
 1260548211 source:/home/ben/dev/base/mutex.cpp
 	"mutex.h"
@@ -175,7 +180,7 @@
 	<string.h>
 	<errno.h>
 
-1260710358 source:/home/ben/dev/base/pfauth.cpp
+1261142626 source:/home/ben/dev/base/pfauth.cpp
 	"pfauth.h"
 	<OperationCode.h>
 	<SysConfig.h>
@@ -188,7 +193,7 @@
 	<map>
 	<string>
 
-1260706388 source:/home/ben/dev/base/socket.cpp
+1261142626 source:/home/ben/dev/base/socket.cpp
 	"socket.h"
 	<OperationCode.h>
 	<WS2tcpip.h>
@@ -196,7 +201,7 @@
 	<netdb.h>
 	<fcntl.h>
 
-1260709888 source:/home/ben/dev/base/sockwatcher.cpp
+1261142626 source:/home/ben/dev/base/sockwatcher.cpp
 	"sockwatcher.h"
 
 1260548211 source:/home/ben/dev/base/thread.cpp
@@ -206,4 +211,15 @@
 	<string.h>
 	<errno.h>
 	"thread.h"
+
+1261142626 source:/home/ben/dev/base/connection.cpp
+	"connector.h"
+	<OperationCode.h>
+	"pfauth.h"
+	<string>
+
+1261142626 /home/ben/dev/base/connection.h
+	"socket.h"
+
+1261142626 /home/ben/dev/base/OperationCode.h
 
