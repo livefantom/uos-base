@@ -9,6 +9,32 @@
 #include <map>
 
 
+class MsgQueue
+{
+	struct MsgElement
+	{
+		AuthMsg		msg;
+		uint32_t	state;
+		uint32_t	retry_times;
+		uint32_t	insert_msecs;
+	};
+	typedef std::map<int, MsgElement> MsgMap;
+	typedef std::pair<int, MsgElement> MsgPair;
+	typedef MsgMap::iterator MsgIter;
+public:
+    int sendRequest(const AuthMsg& req_msg, uint32_t req_seq);
+	int recvResponse(AuthMsg& res_msg, uint32_t* res_seq);
+
+    int getRequest(char* buffer, uint32_t* nbytes, uint32_t* sequence);
+    int setResponse(int retcode, const char* buffer, uint32_t nbytes, uint32_t sequence);
+
+private:
+    MsgMap		_msg_map;
+    uint32_t	_queue_max;
+    uos::Mutex	_mtx;
+
+};
+
 
 typedef std::map<int, AuthMsg> MsgMap;
 typedef std::pair<int, AuthMsg> MsgPair;

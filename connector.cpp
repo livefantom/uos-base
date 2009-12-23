@@ -331,15 +331,20 @@ int Connector::setResponse(int retcode, const char* buffer, uint32_t nbytes, uin
     if ( iter != _msg_map.end() )
     {
         AuthMsg& msg = iter->second;
+        // deal with connection break down.
+        if (E_SYS_NET_INVALID == retcode)
+	        msg.state = 0;
+        else
+	        msg.state = 2;
+
         if (S_SUCCESS == retcode)
         {
+	        DEBUGLOG( "AuthMsg::decodeResponse | Parsed content is following:\n%s\n", buffer );
             http_response_decode(buffer, msg);
         }
         else
-        {
-            msg.retcode = retcode;
-        }
-        msg.state = 2;
+	        msg.retcode = retcode;
+
         retval = S_SUCCESS;
         INFOLOG("PfAuth|%d|User_ID=%s|User_Name=%s|Password=%s|Time=%s|Flag=%s|Adult=%d|Sequence=%d|TC=%llu\n",
                 msg.retcode,
@@ -430,7 +435,7 @@ std::string http_request_encode(const AuthMsg& msg, const ConnProp& prop)
 {
     char buf[CONN_BUF_SZ] = {0};
     std::string content = msg.encodeRequest();
-    std::string connection = (prop.keep_alive) ? "Keep-Alive" : "Close";
+    std::string connection = (prop.keep_alive) ? "keep-alive" : "close";
 
     sprintf( buf, "POST %s HTTP/1.1\r\n"
              "Host: %s:%d\r\n"
@@ -529,6 +534,7 @@ void http_response_decode(std::string res, AuthMsg& msg)
     char content_len[16] = {0};
     int length = 0;
     bool bchunked = false;
+    bool bclosed = false;
     if  (  ( pos1 = res.find("\r\n\r\n") ) != -1 )
     {
         header = res.substr(pos0, pos1 - pos0);
@@ -550,6 +556,13 @@ void http_response_decode(std::string res, AuthMsg& msg)
             strncpy(content_len, (line.substr(pos2+15)).c_str(), 16);
             length = atoi( trim(content_len) );
             break;
+        }
+        else if ( ( pos2 = line.find("Connection:") ) != -1 )
+        {
+            if ( line.find("close", pos2) != -1 )
+            {
+                bclosed = true;
+            }
         }
         pos0 = pos1 + 2;
     }
@@ -577,9 +590,8 @@ void http_response_decode(std::string res, AuthMsg& msg)
     {
         content = body;
     }
+//    printf(">>>>>>>>>>>>>>>>>>>>>> %s\n", content.c_str());
     // parse content.
-    printf(">>>>>>>>>>>>>>>>>>>>>> %s\n", content.c_str());
-
     msg.decodeResponse(content);
 }
 
