@@ -7,7 +7,8 @@
 struct AuthMsg
 {
 	AuthMsg() : gs_ip(0), gs_port(0), seq_id(0), cmd_id(0),
-		game_id(0), gateway_id(0), retcode(-1), adult(0), insert_time(0), state(0) {}
+		game_id(0), gateway_id(0), retcode(-1), adult(0),
+		insert_time(0), send_time(0), recv_time(0), state(0) {}
 	
 	std::string encodeRequest() const;
 	const AuthMsg& decodeResponse(std::string res);
@@ -27,6 +28,8 @@ struct AuthMsg
 	int32_t		adult;
 	// processing control.
 	uint64_t	insert_time;
+	uint64_t	send_time;
+	uint64_t	recv_time;
 	int32_t		state;
 };
 

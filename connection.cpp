@@ -60,7 +60,7 @@ int Connection::disconnect()
 	bzero(_wr_buf, CONN_BUF_SZ);
 
 	setState( S_FREE );
-    printf("Connection::disconnect| Connection closed!\n");
+    DEBUGLOG("Connection::disconnect| Connection closed!\n");
     return S_SUCCESS;
 }
 
@@ -103,7 +103,7 @@ int Connection::do_connect()
         }
         else
         {
-		    printf("connection established!\n");
+    		DEBUGLOG("Connection::do_connect| Connection with %s:%d established!\n", _prop.remote_host, _prop.remote_port);
 	    	retval = S_SUCCESS;
         }
     }
