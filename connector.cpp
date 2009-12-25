@@ -510,7 +510,7 @@ bool try_parse_http_response(std::string res)
             }
             else
             {
-                content_length += atoi( line.c_str() );
+                content_length += strtol( line.c_str(), 0, 16 );
             }
             pos0 = pos1 + 2;
             ++i;

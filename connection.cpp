@@ -78,16 +78,19 @@ int Connection::do_connect()
         	retcode = Socket::connect( addr );
 			if ( S_SUCCESS == retcode || E_SYS_NET_TIMEOUT == retcode)
 	        {
+			    DEBUGLOG("Connection::do_connect| Preconnect to %s:%d OK!\n", _prop.remote_host, _prop.remote_port);
 			    retval = S_SUCCESS;
 	        }
 	        else
 	        {
+			    DEBUGLOG("Connection::do_connect| Preconnect to %s:%d failed: %d\n", _prop.remote_host, _prop.remote_port, retcode);
 	            Socket::close();
 	            setState( S_FREE );
 	        }
         }
         catch (...)
         {
+		    DEBUGLOG("Connection::do_connect| Preconnect to %s:%d thrown exception!\n", _prop.remote_host, _prop.remote_port);
             Socket::close();
             setState( S_FREE );
         }
@@ -140,6 +143,7 @@ int Connection::do_read()
 	        printf("partly msg recevied, wait for next!\n");
 	    	retval = E_SYS_NET_TIMEOUT;
 		}
+		printf(">>>>>>>>>>>>>>>>>>>\n %s\n", _rd_buf);
     }
     // remote closed, maybe whole msg received.
     else if ( 0 == retcode )

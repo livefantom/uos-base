@@ -7,11 +7,18 @@
 
 
 int g_stop = false;
+int g_send = false;
 
 void sigExit(int sig)
 {
 	printf("^C pressed, sig=%d!\n", sig);
 	g_stop = true;
+}
+
+void sigSend(int sig)
+{
+	g_send = !g_send;
+	printf("sig=%d received, g_send=%d!\n", sig, g_send);
 }
 
 int main()
@@ -20,6 +27,7 @@ int main()
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT,  sigExit);
     signal(SIGTERM, sigExit);
+    signal(SIGUSR1, sigSend);
 
 	PfAuth* auth = PfAuth::singleton();
 	auth->initialize("./pfauth.ini");
@@ -40,7 +48,7 @@ int main()
 		msg.cmd_id = 0x10003801;
 
 		SysTimeValue::getTickCount(&now);
-		if ( now - last_send > 100 )
+		if ( now - last_send > 400 && g_send )
 		{
 			SysTimeValue::getTickCount(&last_send);
 			ret = conn->sendRequest(msg, i);

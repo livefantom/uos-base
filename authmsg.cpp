@@ -80,9 +80,11 @@ const AuthMsg& AuthMsg::decodeResponse(std::string res)
             break;
         case 2:
         case 3:
-        case 4:
         case 5:
             retcode = E_JOINT_ACCOUNT_ERROR;
+            break;
+        case 4:
+            retcode = E_JOINT_SIGN_ERROR;
             break;
         default:
             retcode = E_JOINT_MSG_ERROR;
