@@ -429,7 +429,7 @@ int Socket::readBlock(char* buffer, int* nbytes, int flags /* = 0 */)
         nleft -= nrecv;
         cp += nrecv;
     }
-    *nbyte -= nleft;
+    *nbytes -= nleft;
     if (0 == nleft)
     {
     	retval = S_SUCCESS;

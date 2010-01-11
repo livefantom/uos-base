@@ -8,6 +8,7 @@
 #define _UOS_THREAD_H 
 
 #include "uosdef.h"
+#include "mutex.h"
 
 #ifdef WIN32
 #ifndef ULONG_MAX
@@ -46,18 +47,21 @@ private:
 class Thread
 {
 public:
-	Thread():_thr_id(0),_running(false),_finished(false){}
+	static pthread_t currentThreadId();
+
+	explicit Thread():_thr_id(0),_running(false),_finished(false),_stack_sz(0){}
 	virtual ~Thread(){ _thr_id = 0; }
 
 	void start();
 
 	bool wait(unsigned int time = ULONG_MAX);
-	
+
 	void terminate();
 
-	bool running() const;
-	bool finished() const;
-	
+	bool isRunning() const;
+	bool isFinished() const;
+
+    void setStackSize( unsigned int stackSize );
 	unsigned int stackSize() const;
 
 protected:
@@ -75,7 +79,7 @@ private:
 #endif
 	WaitCond	_thr_done;
 
-//	mutable Mutex _mtx;
+	mutable Mutex _mtx;
 
 	bool	_running;
 	bool	_finished;
@@ -93,5 +97,7 @@ _UOS_END
 
 
 #endif//(_UOS_THREAD_H)
+
+
 
 

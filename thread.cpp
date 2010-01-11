@@ -135,8 +135,14 @@ bool WaitCond::wait(unsigned long millisecs)
 //////////////////////////////////////////////////////////////////////////
 // class Thread members
 
+pthread_t Thread::currentThreadId()
+{
+    return pthread_self();
+}
+
 void Thread::start()
 {
+    MutexLocker locker(&_mtx);
 	if (_running)
 	{
 		return;
@@ -196,19 +202,27 @@ bool Thread::wait(unsigned int time/* = ULONG_MAX */)
 	return _thr_done.wait(time);
 }
 
-bool Thread::running() const
+bool Thread::isRunning() const
 {
+    MutexLocker locker(&_mtx);
 	return _running;
 }
 
-bool Thread::finished() const
+bool Thread::isFinished() const
 {
+    MutexLocker locker(&_mtx);
 	return _finished;
+}
+
+void Thread::setStackSize( unsigned int stackSize )
+{
+    MutexLocker locker(&_mtx);
+	_stack_sz = stackSize;
 }
 
 unsigned int Thread::stackSize() const
 {
-    //MutexLocker locker(_mtx);
+    MutexLocker locker(&_mtx);
     return _stack_sz;
 }
 
@@ -313,4 +327,7 @@ void Thread::finish(void* arg)
 }
 
 _UOS_END
+
+
+
 
