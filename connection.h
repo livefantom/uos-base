@@ -33,6 +33,7 @@ public:
     ~Connection();
 
     int do_read();
+	int doRead()
     int do_write();
     int do_connect();
 
