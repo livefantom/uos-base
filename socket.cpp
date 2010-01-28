@@ -384,6 +384,59 @@ int Socket::send_all(const char* buffer, int nbytes, int flags /* = 0 */)
 }
 
 
+int Socket::readBlock(char* buffer, int* nbytes, int flags /* = 0 */)
+{
+    if (-1 == _sock_fd)
+    {
+        return E_SYS_NET_INVALID;
+    }
+    
+    int retval = E_ERROR;
+    int nrecv = 0;
+    int nleft = *nbytes;
+    char* cp = buffer;
+    while (nleft > 0)
+    {
+        if ( -1 == (nrecv = ::recv(_sock_fd, cp, nleft, flags)) )
+        {
+            printf("Socket | Receive data failed: %d: %s\n", errno, strerror(errno));
+            if (EINTR == errno)
+            {
+                nrecv = 0;
+                continue;
+            }
+            else if (ECONNRESET == errno || ENOTCONN == errno || EPIPE == errno)
+            {
+                retval = E_SYS_NET_CLOSED;
+            }
+            else if (ETIMEDOUT == errno || EAGAIN == errno)	// unreasonable while unblocking.
+            {
+                retval = E_SYS_NET_TIMEOUT;
+            }
+            else
+            {
+                retval = (SOCK_ERR_BASE - errno);
+            }
+            break;
+        }
+        else if (0 == nrecv)    // EOF
+        {
+            printf("Socket | Receive data failed: Remote closed!\n");
+            retval = E_SYS_NET_CLOSED;
+            break;
+        }
+
+        nleft -= nrecv;
+        cp += nrecv;
+    }
+    *nbytes -= nleft;
+    if (0 == nleft)
+    {
+    	retval = S_SUCCESS;
+    }
+    return retval;   // bytes received.
+}
+
 //////////////////////////////////////////////////////////////////////////
 // SockAddr members
 SockAddr::SockAddr(const char* host_name, int port)

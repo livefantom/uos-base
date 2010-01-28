@@ -59,6 +59,8 @@ public:
     // Listen for connections made to the socket.
     int listen(int backlog = SOMAXCONN);
 
+    int readBlock(char* buffer, int* nbytes, int flags = 0);
+
     // Receive data.
     int recv(char* buffer, int nbytes, int flags = 0);
 
@@ -86,6 +88,7 @@ public:
     // Create a new socket using the given family, type and protocol number.
     int socket(int family = AF_INET, int type = SOCK_STREAM, int proto = 0);
 
+    //int writeBlock(const char* buffer, int nbytes, int flags = 0);
 
 protected:
 private:

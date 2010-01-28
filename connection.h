@@ -37,6 +37,8 @@ public:
     int do_write();
     int do_connect();
 
+    int doRead();
+
     void setState(uint32_t s)
     {
         _state = s;
