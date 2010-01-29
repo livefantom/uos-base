@@ -318,7 +318,7 @@ int Socket::recv_into(char* buffer, int nbytes, int flags /* = 0 */)
             {
                 return E_SYS_NET_CLOSED;
             }
-            else if (ETIMEDOUT == errno || EAGAIN == errno)
+            else if (ETIMEDOUT == errno || EAGAIN == errno)	// unreasonable while unblocking.
             {
                 return E_SYS_NET_TIMEOUT;
             }
@@ -409,7 +409,7 @@ int Socket::readBlock(char* buffer, int* nbytes, int flags /* = 0 */)
             {
                 retval = E_SYS_NET_CLOSED;
             }
-            else if (ETIMEDOUT == errno || EAGAIN == errno)	// unreasonable while unblocking.
+            else if (ETIMEDOUT == errno || EAGAIN == errno)
             {
                 retval = E_SYS_NET_TIMEOUT;
             }
@@ -429,12 +429,12 @@ int Socket::readBlock(char* buffer, int* nbytes, int flags /* = 0 */)
         nleft -= nrecv;
         cp += nrecv;
     }
-    *nbytes -= nleft;
+    *nbytes -= nleft;   // bytes received.
     if (0 == nleft)
     {
     	retval = S_SUCCESS;
     }
-    return retval;   // bytes received.
+    return retval;
 }
 
 //////////////////////////////////////////////////////////////////////////

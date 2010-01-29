@@ -54,7 +54,7 @@ int main()
 			ret = conn->sendRequest(msg, i);
 			if (ret == 1)
 			{
-				printf("request sended: seq = %d\n", i);
+				printf("[request sent] seq = %d\n", i);
 				++i;
 			}
 		}
@@ -64,7 +64,7 @@ int main()
 		ret = conn->recvResponse(msg1, &seq);
 		if (ret == 1)
 		{
-			printf("response recevied: seq=%d, retcode=%d, state=%d\n", seq, msg1.retcode, msg1.state);
+			printf("[response received] seq=%d, retcode=%d, state=%d\n", seq, msg1.retcode, msg1.state);
 		}
 		usleep(10);
 

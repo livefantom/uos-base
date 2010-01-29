@@ -67,7 +67,7 @@ int Connection::disconnect()
 int Connection::do_connect()
 {
     int retcode = E_ERROR;
-    int retval = E_ERROR;
+    int retval  = E_ERROR;
     if ( isFree() )
     {
         Socket::socket(AF_INET, SOCK_STREAM, 0);
@@ -113,70 +113,10 @@ int Connection::do_connect()
     return retval;
 }
 
-int Connection::do_read()
-{
-    int retval  = E_ERROR;
-    int retcode = E_ERROR;
-
-	// TODO: retcode ÖØÐÂ¹éÀà
-    retcode = Socket::recv(_rd_buf + _rd_idx, _rd_size - _rd_idx);
-    if ( retcode > 0 )
-    {
-    	_rd_idx += retcode;
-		// recevied some msg, try to parse.
-		if ( _prop.keep_alive )
-		{
-	    	retcode = try_parse_http_response(_rd_buf);
-	    	if (true == retcode)
-	    	{
-		        retval = S_SUCCESS;
-		        printf("-----------------msg received completely!\n");
-	    	}
-	    	else
-	    	{
-		        printf("partly msg recevied, wait for next!\n");
-		    	retval = E_SYS_NET_TIMEOUT;
-	    	}
-		}
-		else
-		{
-	        printf("partly msg recevied, wait for next!\n");
-	    	retval = E_SYS_NET_TIMEOUT;
-		}
-		printf(">>>>>>>>>>>>>>>>>>>\n%s\n", _rd_buf);
-    }
-    // remote closed, maybe whole msg received.
-    else if ( 0 == retcode )
-    {
-    	// set state to DONE.
-        setState( S_DONE );
-    	if ( _rd_idx > 0 )// TODO: also try to parse.
-    	{
-	        printf("remote closed, maybe whole msg received.\n");
-	        retval = S_SUCCESS;
-    	}
-    	else
-    	{
-			retval = E_SYS_NET_INVALID;
-    	}
-    }
-    else if ( E_SYS_NET_TIMEOUT == retcode ) // unreasonable error!!!
-    {
-    	retval = E_SYS_NET_TIMEOUT;
-    }
-    else
-    {
-        DEBUGLOG("Connection::do_read | Detected connection error:%d\n", retcode);
-        retval = E_SYS_NET_INVALID;
-    }
-
-    return retval;
-}
-
 int Connection::doRead()
 {
-    int retval  = E_ERROR;
     int retcode = E_ERROR;
+    int retval  = E_ERROR;
 
 	int len = _rd_size - _rd_idx;
     retcode = Socket::readBlock(_rd_buf + _rd_idx, &len);
@@ -187,7 +127,7 @@ int Connection::doRead()
     {
     	// set state to DONE.
         setState( S_DONE );
-    	if ( _rd_idx > 0 )// TODO: also try to parse.
+    	if ( _rd_idx > 0 )  // TODO: also try to parse.
     	{
 	        printf("remote closed, maybe whole msg received.\n");
 	        retval = S_SUCCESS;
@@ -199,30 +139,30 @@ int Connection::doRead()
     }
     else if ( E_SYS_NET_TIMEOUT == retcode )
     {
- 		// recevied some msg, try to parse.
+ 		// received some msg, try to parse.
 	   	if ( _rd_idx > 0 && _prop.keep_alive )
     	{
  	    	retcode = try_parse_http_response(_rd_buf);
-	    	if (true == retcode)
+	    	if ( true == retcode )
 	    	{
 		        retval = S_SUCCESS;
 		        printf("-----------------msg received completely!\n");
 	    	}
 	    	else
 	    	{
-		        printf("partly msg recevied, wait for next!\n");
+		        printf("partly msg received, wait for next!\n");
 		    	retval = E_SYS_NET_TIMEOUT;
 	    	}
     	}
     	else
     	{
- 	        printf("partly msg recevied, wait for next!\n");
+ 	        printf("nothing received, unreasonable!\n");
 	    	retval = E_SYS_NET_TIMEOUT;
     	}
     }
     else
     {
-        DEBUGLOG("Connection::do_read | Detected connection error:%d\n", retcode);
+        DEBUGLOG("Connection::doRead | Detected connection error:%d\n", retcode);
         retval = E_SYS_NET_INVALID;
     }
 
@@ -242,7 +182,7 @@ int Connection::do_write()
     // send over.
     if ( _wr_idx >= _wr_size )
     {
-    	DEBUGLOG( "Connection::do_write | The following request sended:\n%s\n", _wr_buf );
+    	DEBUGLOG( "Connection::do_write | The following request sent:\n%s\n", _wr_buf );
     	retval = S_SUCCESS;
     }
     else if (retcode < 0 && retcode != E_SYS_NET_TIMEOUT)
@@ -250,7 +190,7 @@ int Connection::do_write()
         DEBUGLOG("Connection::do_write | Detected connection error:%d\n", retcode);
         retval = E_SYS_NET_INVALID;
     }
-    // else, partly sended, wait for send again.
+    // else, partly sent, wait for send again.
     else
     {
     	retval = E_SYS_NET_TIMEOUT;

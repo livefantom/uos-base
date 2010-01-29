@@ -32,12 +32,9 @@ public:
     Connection(const ConnProp& prop);
     ~Connection();
 
-    int do_read();
-	int doRead()
+	int doRead();
     int do_write();
     int do_connect();
-
-    int doRead();
 
     void setState(uint32_t s)
     {

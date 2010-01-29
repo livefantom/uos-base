@@ -35,6 +35,9 @@ public:
     Socket():_sock_fd(-1){}
     virtual ~Socket(){}
 
+    // Accept a connection.
+    int accept(SockAddr& address);
+
     // Bind the socket to address.
     int bind(const SockAddr& address);
 
@@ -88,7 +91,7 @@ public:
     // Create a new socket using the given family, type and protocol number.
     int socket(int family = AF_INET, int type = SOCK_STREAM, int proto = 0);
 
-    //int writeBlock(const char* buffer, int nbytes, int flags = 0);
+    int writeBlock(const char* buffer, int* nbytes, int flags = 0);
 
 protected:
 private:

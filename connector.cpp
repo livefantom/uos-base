@@ -218,7 +218,8 @@ void Connector::run()
                 }
                 else if ( _conn[i].isReading() && _watch.check_fd( _conn[i].fileno(), FDW_READ ) )
                 {
-                    retcode = _conn[i].do_read();
+                    //retcode = _conn[i].do_read();
+                    retcode = _conn[i].doRead();
                     if (S_SUCCESS == retcode)
                     {
                         // set one response while read over.
@@ -339,6 +340,8 @@ int Connector::getRequest(char* buffer, uint32_t* nbytes, uint32_t* sequence)
 int Connector::setResponse(int retcode, const char* buffer, uint32_t nbytes, uint32_t sequence)
 {
     int retval = -1;
+    char msg_buf[CONN_BUF_SZ] = {0};
+    strncpy(msg_buf, buffer, nbytes);
     _mtx.lock();
     MsgIter iter = _msg_map.find(sequence);
     if ( iter != _msg_map.end() )
@@ -356,8 +359,8 @@ int Connector::setResponse(int retcode, const char* buffer, uint32_t nbytes, uin
 		    msg.state = 2;
 	        if (S_SUCCESS == retcode)
 	        {
-		        DEBUGLOG( "AuthMsg::decodeResponse | Parsed content is following:\n%s\n", buffer );
-	            http_response_decode(buffer, msg);
+		        DEBUGLOG("AuthMsg::decodeResponse | Parsed content is following:\n%s\n", buffer);
+	            http_response_decode(msg_buf, msg);
 	        }
         }
         retval = S_SUCCESS;
@@ -541,11 +544,13 @@ void http_response_decode(std::string res, AuthMsg& msg)
     int length = 0;
     bool bchunked = false;
     bool bclosed = false;
+    // split header & body.
     if  (  ( pos1 = res.find("\r\n\r\n") ) != -1 )
     {
         header = res.substr(pos0, pos1 - pos0);
         body = res.substr(pos1 + 4);
     }
+    // parse header.
     while ( ( pos1 = header.find("\r\n", pos0) ) != -1 )
     {
         line = header.substr(pos0, pos1 - pos0);
