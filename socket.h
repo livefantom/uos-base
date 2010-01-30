@@ -47,7 +47,7 @@ public:
     // Connect to a remote socket at address.
     int connect(const SockAddr& address);
 
-    // Return the socket¡¯s file descriptor(integer).
+    // Return the socket's file descriptor(integer).
     int fileno() const
     {
         return _sock_fd;
