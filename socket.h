@@ -36,7 +36,7 @@ public:
     virtual ~Socket(){}
 
     // Accept a connection.
-    int accept(SockAddr& address);
+    int accept(Socket& conn_sock, SockAddr& address);
 
     // Bind the socket to address.
     int bind(const SockAddr& address);

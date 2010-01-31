@@ -40,6 +40,30 @@ int Socket::socket(int family /* = AF_INET */, int type /* = SOCK_STREAM */, int
     return 1;
 }
 
+int accept(Socket& conn_sock, SockAddr& conn_addr)
+{
+    if (-1 == _sock_fd)
+    {
+        return E_SYS_NET_INVALID;
+    }
+    struct sockaddr_in conn_addr;
+    int addrlen = sizeof(conn_addr);
+    while ( -1 == ::accept(conn_sock._sock_fd, (struct sockaddr*) &conn_addr, &addrlen) )
+    {
+        printf("Accept connection error: %d: %s\n", errno, strerror(errno) );
+        if (EINTR == errno)
+        {
+            continue;
+        }
+        else
+        {
+            return (SOCK_ERR_BASE - errno);
+        }
+    }
+    
+    return 1;
+}
+
 
 int Socket::connect(const SockAddr& address)
 {
@@ -76,7 +100,7 @@ int Socket::bind(const SockAddr& address)
     {
         return E_SYS_NET_INVALID;
     }
-    struct ::sockaddr_in svraddr;
+    struct sockaddr_in svraddr;
 	svraddr.sin_family = _family;
 	svraddr.sin_addr.s_addr = htonl(address._ip4);
 	svraddr.sin_port = htons(address._port);

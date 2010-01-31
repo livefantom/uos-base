@@ -8,10 +8,8 @@
 
 #define MAX_LINE	1024*4
 
-#define _USE_FORK
-//#define _USE_PTHREAD
 
-char sndbuf[MAX_LINE] = "HTTP/1.1 200 OK\n"
+char http_resp[MAX_LINE] = "HTTP/1.1 200 OK\n"
 "Date: Tue, 08 Jul 2008 13:04:53 GMT\n"
 "Server: Apache/2.2.4 (Unix)\n"
 "Content-Length: 1\n"
@@ -32,13 +30,11 @@ void* str_echo(void* arg)
 {
 	ssize_t		rcvlen;
 	char		rcvbuf[MAX_LINE];
+    char        sndbuf[MAX_LINE];
 	int* 		sockfd = (int*)arg;
-#ifdef _USE_FORK
 	pid_t		pid = getpid();
-#elif defined(_USE_PTHREAD)
-	pthread_t	pid = pthread_self();
-#endif
-	srand(pid);
+
+    srand(pid);
 	printf("\t\\_ pid:%ld> child starting...\n", (long) pid);
 	while(1)
 	{
@@ -49,11 +45,12 @@ void* str_echo(void* arg)
 			int sec = rand()%20;
 			printf("\t\\_ pid:%ld> sleep %d seconds...\n", (long) pid, sec);
 			sleep( sec );	// wait for client receive timeout!!
-			//write(*sockfd, rcvbuf, rcvlen);
-			int offset = strlen(sndbuf);
-			sprintf(sndbuf + offset, "%d", rand()%2);
-			write(*sockfd, sndbuf, strlen(sndbuf));
-			sndbuf[offset] = 0;
+#if 0
+			memcpy(sndbuf, rcvbuf, rcvlen);
+#else
+			snprintf( sndbuf, MAX_LINE, "%s%d", http_resp, rand()%2 );
+#endif
+            write(*sockfd, sndbuf, strlen(sndbuf));
 			//continue;
 			break;
 		}
@@ -72,37 +69,29 @@ void* svr_func(void* arg)
 	struct sockaddr_in	svraddr, cltaddr;
 	socklen_t		cltlen;
 	int 			listenfd, connfd;
-#ifdef _USE_FORK
 	pid_t			childpid;
-	pid_t			mypid = getpid();
-#elif defined(_USE_PTHREAD)
-	pthread_t		childpid;
-#endif
 	int			status;
 
     uos::Socket lisn_sock;
+
+#ifdef _USE_FORK
+    signal(SIGCHLD, sig_chld);
+#endif
+
     lisn_sock.socket();
     lisn_sock.bind(SockAddr(0, *port));
-    lisn_sock.listen();
+    if (lisn_sock.listen() != 1)
+        return -1;
 
-	printf("pid:%ld> listen at port:%d, backlog:%d\n", (long)mypid, *port, SOMAXCONN);
-#ifdef _USE_FORK
-	signal(SIGCHLD, sig_chld);
-#endif
+    printf("pid:%ld> listen at port:%d, backlog:%d\n", getpid(), *port, SOMAXCONN);
+    uos::Socket conn_sock;
+    uos::SockAddr conn_addr;
 	while(1)
 	{
-		cltlen = sizeof(cltaddr);
-		// int accept(int sockfd, sturct sockaddr* cliaddr, socklen_t* addrlen);
-		if ( -1 == (connfd = accept(listenfd, (struct sockaddr*) &cltaddr, &cltlen)) )
-		{
-			if (errno = EINTR)	// this may occur when sighandler return!
-				continue;
-			else
-				printf("pid:%ld> accept error:%d\n", getpid(), errno);
-		}
-		// ### if no new connections, this accept() will block!!!
-#ifdef _USE_FORK
-		// pid_t fork(void)
+        if ( EINTR == lisn_sock.accept(conn_sock, conn_addr) ) // ### if no new connections, this accept() will block!!!
+			continue;
+
+        // pid_t fork(void)
 		if ( 0 == (childpid = fork()) )
 		{// child process
 			// int close(int sockfd);
@@ -110,11 +99,8 @@ void* svr_func(void* arg)
 			str_echo( (void*) &connfd );
 			exit(0);
 		}
-		close(connfd);// passed it to child, so close it!!
+		close(connfd);// it was passed it to child by fork(), so close it!!
 
-#elif defined(_USE_PTHREAD)
-		pthread_create(&childpid, NULL, str_echo, (void*) &connfd);
-#endif
 	}
 }
 
