@@ -1,7 +1,7 @@
 #ifndef _SOCKET_WATCHER_H
 #define _SOCKET_WATCHER_H
 
-#include "uosdef.h"
+#include "../uosdef.h"
 #include <sys/select.h>
 
 

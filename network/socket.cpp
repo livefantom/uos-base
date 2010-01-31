@@ -6,14 +6,14 @@
 // @date: 2009-05-02
 
 #include "socket.h"
-#include <OperationCode.h>
+#include "../OperationCode.h"
 
 #ifdef WIN32
-#	include <WS2tcpip.h>
+#   include <WS2tcpip.h>
 #   include <io.h>
 #else
 #   include <netdb.h>
-#	include <fcntl.h>
+#   include <fcntl.h>
 #endif
 
 
@@ -40,15 +40,16 @@ int Socket::socket(int family /* = AF_INET */, int type /* = SOCK_STREAM */, int
     return 1;
 }
 
-int accept(Socket& conn_sock, SockAddr& conn_addr)
+int Socket::accept(Socket& conn_sock, SockAddr& conn_addr)
 {
     if (-1 == _sock_fd)
     {
         return E_SYS_NET_INVALID;
     }
-    struct sockaddr_in conn_addr;
-    int addrlen = sizeof(conn_addr);
-    while ( -1 == ::accept(conn_sock._sock_fd, (struct sockaddr*) &conn_addr, &addrlen) )
+    sockaddr_in addr;
+    socklen_t addrlen = sizeof(addr);
+    int conn_fd;
+    while ( -1 == (conn_fd = ::accept(_sock_fd, (struct sockaddr*) &addr, &addrlen)) )
     {
         printf("Accept connection error: %d: %s\n", errno, strerror(errno) );
         if (EINTR == errno)
@@ -60,6 +61,13 @@ int accept(Socket& conn_sock, SockAddr& conn_addr)
             return (SOCK_ERR_BASE - errno);
         }
     }
+    conn_sock._sock_fd  = conn_fd;
+    conn_sock._family   = addr.sin_family;
+    conn_sock._proto    = _proto;
+    conn_sock._type     = _type;
+
+    conn_addr._ip4  = ntohl(addr.sin_addr.s_addr);
+    conn_addr._port = ntohs(addr.sin_port);
     
     return 1;
 }
@@ -71,11 +79,11 @@ int Socket::connect(const SockAddr& address)
     {
         return E_SYS_NET_INVALID;
     }
-    struct sockaddr_in svraddr;
-	svraddr.sin_family = _family;
-	svraddr.sin_addr.s_addr = htonl(address._ip4);
-	svraddr.sin_port = htons(address._port);
-	if ( -1 == ::connect(_sock_fd, (struct sockaddr*) &svraddr, sizeof(svraddr)) )
+    sockaddr_in addr;
+	addr.sin_family = _family;
+	addr.sin_addr.s_addr = htonl(address._ip4);
+	addr.sin_port = htons(address._port);
+	if ( -1 == ::connect(_sock_fd, (struct sockaddr*) &addr, sizeof(addr)) )
 	{
         printf("Socket | Connect to %s:%d error: %d: %s\n", long2ip(address._ip4).c_str(), address._port, errno, strerror(errno));
         if (EINPROGRESS == errno)
@@ -100,11 +108,11 @@ int Socket::bind(const SockAddr& address)
     {
         return E_SYS_NET_INVALID;
     }
-    struct sockaddr_in svraddr;
-	svraddr.sin_family = _family;
-	svraddr.sin_addr.s_addr = htonl(address._ip4);
-	svraddr.sin_port = htons(address._port);
-	if ( -1 == ::bind(_sock_fd, (struct sockaddr*) &svraddr, sizeof(svraddr)) )
+    sockaddr_in addr;
+	addr.sin_family = _family;
+	addr.sin_addr.s_addr = htonl(address._ip4);
+	addr.sin_port = htons(address._port);
+	if ( -1 == ::bind(_sock_fd, (struct sockaddr*) &addr, sizeof(addr)) )
 	{
 		printf("bind error: %d: %s\n", errno, strerror(errno) );
 		return (SOCK_ERR_BASE - errno);

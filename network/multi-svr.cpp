@@ -1,4 +1,3 @@
-#include <pthread.h>
 #include <sys/wait.h>
 #include <string.h>
 #include <stdio.h>
@@ -10,12 +9,12 @@
 
 
 char http_resp[MAX_LINE] = "HTTP/1.1 200 OK\n"
-"Date: Tue, 08 Jul 2008 13:04:53 GMT\n"
-"Server: Apache/2.2.4 (Unix)\n"
-"Content-Length: 1\n"
-"Keep-Alive: timeout=5, max=100\n"
-"Connection: Keep-Alive\n"
-"Content-Type: text/html; charset=GBK\n\n";
+    "Date: Tue, 08 Jul 2008 13:04:53 GMT\n"
+    "Server: Apache/2.2.4 (Unix)\n"
+    "Content-Length: 1\n"
+    "Keep-Alive: timeout=5, max=100\n"
+    "Connection: Keep-Alive\n"
+    "Content-Type: text/html; charset=GBK\n\n";
 
 // sighandler_t
 void sig_chld(int signo)
@@ -23,83 +22,84 @@ void sig_chld(int signo)
 	pid_t	pid;
 	int	status;
 	while( (pid = waitpid(-1, &status, WNOHANG)) > 0 )
-		printf("pid:%ld> sig_chld> child:%ld terminated, status:%d\n", (long)getpid(), (long) pid, status);
+		printf("pid:%ld> sig_chld | child:%ld terminated, status:%d\n", (long)getpid(), (long) pid, status);
 }
 
 void* str_echo(void* arg)
 {
-	ssize_t		rcvlen;
 	char		rcvbuf[MAX_LINE];
     char        sndbuf[MAX_LINE];
-	int* 		sockfd = (int*)arg;
-	pid_t		pid = getpid();
+    int		    rcvlen(MAX_LINE);
+    int         sndlen;
+    uos::Socket* sock_ptr = (uos::Socket*)arg;
 
+    pid_t pid = getpid();
+    printf("\t\\_ pid:%ld> child starting...\n", (long) pid);
     srand(pid);
-	printf("\t\\_ pid:%ld> child starting...\n", (long) pid);
-	while(1)
+	do
 	{
-		rcvlen = read(*sockfd, rcvbuf, MAX_LINE);
-//		printf("\t\\_ pid:%ld> received %d bytes\n", (long) pid, rcvlen);
-		if (rcvlen > 0)
-		{
-			int sec = rand()%20;
-			printf("\t\\_ pid:%ld> sleep %d seconds...\n", (long) pid, sec);
-			sleep( sec );	// wait for client receive timeout!!
-#if 0
-			memcpy(sndbuf, rcvbuf, rcvlen);
-#else
-			snprintf( sndbuf, MAX_LINE, "%s%d", http_resp, rand()%2 );
-#endif
-            write(*sockfd, sndbuf, strlen(sndbuf));
-			//continue;
-			break;
-		}
-		else if (rcvlen < 0 && errno == EINTR)
-			continue;
-		else if (rcvlen < 0)
-			printf("\t\\_ pid:%ld> read error!\n", (long) pid);
-		break;
-	}
-	close(*sockfd);
+        rcvlen = sock_ptr->recv(rcvbuf, rcvlen);
+        if (rcvlen <= 0)
+        {
+            break;
+        }
+        printf("\t\\_ pid:%ld> received %d bytes\n", (long) pid, rcvlen);
+		int sec = rand()%20;
+		printf("\t\\_ pid:%ld> sleep %d seconds...\n", (long) pid, sec);
+		sleep( sec );	// wait for client receive timeout!!
+
+        //memcpy(sndbuf, rcvbuf, rcvlen);
+		snprintf( sndbuf, MAX_LINE, "%s%d", http_resp, rand()%2 );
+
+        sndlen = sock_ptr->send_all(sndbuf, strlen(sndbuf));
+        if (sndlen > 0)
+        {
+            printf("\t\\_ pid:%ld> sent %d bytes\n", (long) pid, sndlen);
+        }
+		//continue;
+	} while(false);
+    sock_ptr->close();
+    return 0;
 }
 
 void* svr_func(void* arg)
 {
 	int* port = (int*)arg;
-	struct sockaddr_in	svraddr, cltaddr;
-	socklen_t		cltlen;
-	int 			listenfd, connfd;
-	pid_t			childpid;
+	pid_t		childpid;
 	int			status;
 
-    uos::Socket lisn_sock;
-
-#ifdef _USE_FORK
     signal(SIGCHLD, sig_chld);
-#endif
 
+    uos::Socket lisn_sock;
     lisn_sock.socket();
-    lisn_sock.bind(SockAddr(0, *port));
+    if (lisn_sock.bind(uos::SockAddr((uint32_t)0, *port)) != 1)
+    {
+        return 0;
+    }
     if (lisn_sock.listen() != 1)
-        return -1;
-
+    {
+        return 0;
+    }
     printf("pid:%ld> listen at port:%d, backlog:%d\n", getpid(), *port, SOMAXCONN);
+
     uos::Socket conn_sock;
-    uos::SockAddr conn_addr;
+    uos::SockAddr conn_addr((uint32_t)0, 0);
 	while(1)
 	{
-        if ( EINTR == lisn_sock.accept(conn_sock, conn_addr) ) // ### if no new connections, this accept() will block!!!
-			continue;
+        if (lisn_sock.accept(conn_sock, conn_addr) != 1)
+        {
+            continue;
+        }
+        // ### if no new connections, this accept() will block!!!
 
         // pid_t fork(void)
 		if ( 0 == (childpid = fork()) )
 		{// child process
-			// int close(int sockfd);
-			close(listenfd);
-			str_echo( (void*) &connfd );
+            lisn_sock.close();
+			str_echo( (void*) &conn_sock );
 			exit(0);
 		}
-		close(connfd);// it was passed it to child by fork(), so close it!!
+		conn_sock.close();// it was passed it to child by fork(), so close it!!
 
 	}
 }
@@ -108,19 +108,17 @@ void* svr_func(void* arg)
 int main(int argc, char** argv)
 {
 	pid_t	childpid;
-	int	childnum = 10;
-	int	port = 11001;
-	int 	i = 0;
 	int	status;
-	for (; i < childnum; i++)
+    int	port = (argc > 1) ? atoi(argv[1]) : 11001;
+    int	childnum = (argc > 2) ? atoi(argv[2]) : 10;
+
+    for (int i(0); i < childnum; ++i)
 	{
-#ifdef _USE_FORK
 		if ( 0 == (childpid = fork()) )
 		{
 			svr_func(&port);
 			exit(0);
 		}
-#endif
 		port++;
 	}
 	while( (childpid = waitpid(-1, &status, WNOHANG)) > 0 )

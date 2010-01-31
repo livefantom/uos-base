@@ -9,7 +9,7 @@
 #ifndef _UOS_SOCKET_H
 #define _UOS_SOCKET_H
 
-#include "uosdef.h"
+#include "../uosdef.h"
 
 #ifdef WIN32
 #   include <WinSock2.h>

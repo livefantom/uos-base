@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="uos-base"
-	ProjectGUID="{30F5EE7F-39F9-49FF-B08D-5AB127E038BB}"
-	RootNamespace="uosbase"
+	Name="network"
+	ProjectGUID="{C4938902-8B66-4AAB-83C9-E4C17809A5F5}"
+	RootNamespace="network"
 	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
@@ -40,7 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="WIN32"
+				PreprocessorDefinitions="WIN32;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -163,43 +163,19 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\authclient.cpp"
+				RelativePath=".\multi-clt.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\authmsg.cpp"
+				RelativePath=".\multi-svr.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\connection.cpp"
+				RelativePath=".\socket.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\connector.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\logger.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\main.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\mutex.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\pfauth.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\thread.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\thread_win32.cpp"
+				RelativePath=".\sockwatcher.cpp"
 				>
 			</File>
 		</Filter>
@@ -209,52 +185,16 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\authclient.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\authmsg.h"
-				>
-			</File>
-			<File
-				RelativePath=".\connection.h"
-				>
-			</File>
-			<File
-				RelativePath=".\connector.h"
-				>
-			</File>
-			<File
-				RelativePath=".\http_conn.h"
-				>
-			</File>
-			<File
-				RelativePath=".\logger.h"
-				>
-			</File>
-			<File
-				RelativePath=".\mutex.h"
-				>
-			</File>
-			<File
-				RelativePath=".\OperationCode.h"
-				>
-			</File>
-			<File
-				RelativePath=".\pfauth.h"
-				>
-			</File>
-			<File
-				RelativePath=".\thread.h"
-				>
-			</File>
-			<File
-				RelativePath=".\uosdef.h"
+				RelativePath=".\sockwatcher.h"
 				>
 			</File>
 		</Filter>
 		<File
-			RelativePath=".\pfauth.ini"
+			RelativePath=".\Makefile"
 			>
 		</File>
 	</Files>
