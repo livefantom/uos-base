@@ -187,6 +187,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\socket\multi-clt.c"
+				>
+			</File>
+			<File
+				RelativePath=".\socket\multi-svr.c"
+				>
+			</File>
+			<File
 				RelativePath=".\mutex.cpp"
 				>
 			</File>
