@@ -45,6 +45,7 @@ public:
     void setLevel(LOG_LEVEL level){ _level = level; }
 
     int output(LOG_LEVEL level, const char* format, ...);
+    int error(const char* format, ...);
     int warning(const char* format, ...);
     int info(const char* format, ...);
     int debug(const char* format, ...);

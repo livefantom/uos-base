@@ -131,6 +131,7 @@ int Logger::voutput(LOG_LEVEL level, const char* format, va_list ap)
     int log_len = 0;
     char buffer[MAX_BUFFER_SIZE+1] = {0};
     char time_buf[MAX_TIME_STR+1] = {0};
+    char log_level_field[6] = {' ', 'F', 'E', 'W', 'I', 'D'};
     struct timeval tv;
     struct tm* timeptr = NULL;
     time_t seconds = 0;
@@ -151,12 +152,19 @@ int Logger::voutput(LOG_LEVEL level, const char* format, va_list ap)
         mseconds);
 
     time_buf[MAX_TIME_STR] = '\0';
-    sprintf(buffer, "%s|%c|%u|%08X|", time_buf, 'U',  getpid(), gettid());
-    retval = vsnprintf(buffer+strlen(buffer), MAX_BUFFER_SIZE, format, ap);
+    sprintf(buffer, "%s|%c|%u|%08X|", time_buf, log_level_field[level],  getpid(), gettid());
+    retval = vsnprintf(buffer+strlen(buffer), MAX_BUFFER_SIZE-strlen(buffer), format, ap);
     if (retval < 0)
     {
         printf("vsnprintf error: %d: %s\n", errno, strerror(errno));
         return -1;
+    }
+    // append an CRLF
+    log_len = strlen(buffer);
+    if (buffer[log_len-1] != '\n')
+    {
+        buffer[log_len] = '\n';
+        buffer[log_len+1] = '\0';
     }
     buffer[MAX_BUFFER_SIZE] = '\0';
 
@@ -183,6 +191,22 @@ int Logger::output(LOG_LEVEL level, const char* format, ...)
     va_list arglist;
     va_start(arglist, format);
     int retval = voutput(level, format, arglist);
+    va_end(arglist);
+
+    return retval;
+}
+
+int Logger::error(const char* format, ...)
+{
+    if (NULL == format)
+    	return output(LOG_FATAL, "%s", "log `format' string is NULL!\n");
+
+    if (_level < LOG_ERROR)
+        return 1;
+
+    va_list arglist;
+    va_start(arglist, format);
+    int retval = voutput(LOG_ERROR, format, arglist);
     va_end(arglist);
 
     return retval;
